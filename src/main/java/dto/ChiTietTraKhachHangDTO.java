@@ -1,11 +1,17 @@
 package dto;
 
+import java.math.BigDecimal;
+
 public class ChiTietTraKhachHangDTO {
     private int maCTPTK;
     private int maPTK;
     private int maSach;
     private int soLuong;
     private String tinhTrangSach;
+
+    private String tenSach;
+    private BigDecimal donGia;
+    private BigDecimal thanhTienHoan;
 
     public ChiTietTraKhachHangDTO() {
     }
@@ -56,6 +62,30 @@ public class ChiTietTraKhachHangDTO {
 
     public void setTinhTrangSach(String tinhTrangSach) {
         this.tinhTrangSach = tinhTrangSach;
+    }
+
+    public String getTenSach() {
+        return tenSach;
+    }
+
+    public void setTenSach(String tenSach) {
+        this.tenSach = tenSach;
+    }
+
+    public BigDecimal getDonGia() {
+        return donGia;
+    }
+
+    public void setDonGia(BigDecimal donGia) {
+        this.donGia = donGia;
+    }
+
+    public BigDecimal getThanhTienHoan() {
+        return thanhTienHoan;
+    }
+
+    public void setThanhTienHoan(BigDecimal thanhTienHoan) {
+        this.thanhTienHoan = thanhTienHoan;
     }
 
     @Override

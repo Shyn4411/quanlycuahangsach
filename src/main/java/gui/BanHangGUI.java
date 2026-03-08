@@ -2,40 +2,55 @@ package gui;
 
 import bus.BanHangBUS;
 import bus.KhachHangBUS;
+import bus.KhuyenMaiBUS;
 import bus.SachBUS;
 import dto.ChiTietHoaDonDTO;
 import dto.KhachHangDTO;
+import dto.KhuyenMaiDTO;
 import dto.SachDTO;
 import dto.TaiKhoanDTO;
+import enums.PhuongThucThanhToan;
 import enums.TrangThaiSach;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
-import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
+import java.awt.Font;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.math.BigDecimal;
 import java.text.DecimalFormat;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.itextpdf.text.*;
+import com.itextpdf.text.pdf.*;
+import java.io.FileOutputStream;
 
 public class BanHangGUI extends JPanel {
 
     private TaiKhoanDTO currentUser;
     private BanHangBUS banHangBUS = new BanHangBUS();
     private KhachHangBUS khachHangBUS = new KhachHangBUS();
+    private KhuyenMaiBUS kmBUS = new KhuyenMaiBUS();
     private SachBUS sachBUS = new SachBUS();
+
     private List<ChiTietHoaDonDTO> dsGioHang = new ArrayList<>();
     private Integer currentCustomerId = null;
 
+    private KhuyenMaiDTO kmApDung = null;
+    private BigDecimal soTienDuocGiam = BigDecimal.ZERO;
+
     private JTable tblCart, tblBooks, tblOnline;
     private DefaultTableModel cartModel, bookModel, onlineModel;
-    private JLabel lblTongTien, lblThanhToan, lblTenKhach;
-    private JTextField txtSearch, txtSoLuong, txtSDT;
+    private JLabel lblTongTien, lblThanhToan, lblTenKhach, lblGiamGia;
+    private JTextField txtSearch, txtSoLuong, txtSDT, txtMaGiamGia;
+    private JComboBox<String> cbxPhuongThucThanhToan;
 
     private DecimalFormat df = new DecimalFormat("#,###");
 
@@ -48,6 +63,7 @@ public class BanHangGUI extends JPanel {
         this.currentUser = user;
         initUI();
         loadDanhSachSach();
+        loadDonOnline();
     }
 
     private void initUI() {
@@ -68,52 +84,35 @@ public class BanHangGUI extends JPanel {
         posPanel.setBackground(COL_BG_MAIN);
         posPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        // --- BÊN TRÁI: DANH MỤC SÁCH ---
         JPanel leftPanel = new JPanel(new BorderLayout(0, 15));
         leftPanel.setOpaque(false);
-
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
         searchPanel.setBackground(COL_WHITE);
         searchPanel.setBorder(new LineBorder(new Color(230, 230, 230)));
         searchPanel.add(new JLabel("Tìm sách:"));
         txtSearch = new JTextField(20);
-        txtSearch.setPreferredSize(new Dimension(200, 35));
         searchPanel.add(txtSearch);
         JButton btnSearch = new JButton("Tìm Kiếm");
         styleButton(btnSearch, COL_SIDEBAR, 110);
         searchPanel.add(btnSearch);
         leftPanel.add(searchPanel, BorderLayout.NORTH);
 
-        // Khởi tạo bảng Sách
-        String[] bookCols = {"Mã Sách", "Tên Sách", "Giá Bán", "Kho"};
-        bookModel = new DefaultTableModel(bookCols, 0) {
+        bookModel = new DefaultTableModel(new String[]{"Mã Sách", "Tên Sách", "Giá Bán", "Kho"}, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         tblBooks = new JTable(bookModel);
-
-        // Cập nhật Style: Cột 1 (Tên sách) nằm trái
         styleTable(tblBooks, new int[]{1}, -1);
-
-        // --- TÍNH NĂNG DOUBLE CLICK ĐỂ THÊM VÀO GIỎ ---
         tblBooks.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    txtSoLuong.setText("1"); // Mặc định số lượng là 1 khi double click
-                    handlingAddToCart();
-                }
+            @Override public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) { txtSoLuong.setText("1"); handlingAddToCart(); }
             }
         });
-
-        JScrollPane scrollBooks = new JScrollPane(tblBooks);
-        scrollBooks.setBorder(new LineBorder(new Color(230, 230, 230)));
-        leftPanel.add(scrollBooks, BorderLayout.CENTER);
+        leftPanel.add(new JScrollPane(tblBooks), BorderLayout.CENTER);
 
         JPanel pnlAddAction = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 10));
         pnlAddAction.setOpaque(false);
         pnlAddAction.add(new JLabel("Số lượng:"));
         txtSoLuong = new JTextField("1", 5);
-        txtSoLuong.setPreferredSize(new Dimension(60, 35));
         txtSoLuong.setHorizontalAlignment(JTextField.CENTER);
         pnlAddAction.add(txtSoLuong);
         JButton btnAddCart = new JButton("THÊM VÀO GIỎ");
@@ -121,46 +120,32 @@ public class BanHangGUI extends JPanel {
         pnlAddAction.add(btnAddCart);
         leftPanel.add(pnlAddAction, BorderLayout.SOUTH);
 
-        // --- BÊN PHẢI: GIỎ HÀNG & THANH TOÁN ---
         JPanel rightPanel = new JPanel(new BorderLayout(0, 15));
         rightPanel.setPreferredSize(new Dimension(450, 0));
         rightPanel.setOpaque(false);
 
         JPanel pnlCartWrap = new JPanel(new BorderLayout());
         pnlCartWrap.setBackground(COL_WHITE);
-        pnlCartWrap.setBorder(BorderFactory.createTitledBorder(
-                new LineBorder(new Color(230, 230, 230)), "CHI TIẾT GIỎ HÀNG",
-                TitledBorder.LEFT, TitledBorder.TOP, new Font("Segoe UI", Font.BOLD, 13), COL_SIDEBAR));
-
-        String[] cartCols = {"Sách", "SL", "Đơn Giá", "Thành Tiền"};
-        cartModel = new DefaultTableModel(cartCols, 0);
+        pnlCartWrap.setBorder(BorderFactory.createTitledBorder(new LineBorder(new Color(230, 230, 230)), "GIỎ HÀNG"));
+        cartModel = new DefaultTableModel(new String[]{"Sách", "SL", "Đơn Giá", "Thành Tiền"}, 0);
         tblCart = new JTable(cartModel);
-
-        // Cập nhật Style: Cột 0 (Tên sách trong giỏ) nằm trái
         styleTable(tblCart, new int[]{0}, -1);
-
         pnlCartWrap.add(new JScrollPane(tblCart), BorderLayout.CENTER);
 
         JButton btnXoa = new JButton("Xóa món đã chọn");
-        btnXoa.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btnXoa.setForeground(Color.RED);
         btnXoa.setContentAreaFilled(false);
-        btnXoa.setBorder(new EmptyBorder(5, 0, 5, 0));
-        btnXoa.setCursor(new Cursor(Cursor.HAND_CURSOR));
         pnlCartWrap.add(btnXoa, BorderLayout.SOUTH);
         rightPanel.add(pnlCartWrap, BorderLayout.CENTER);
 
-        // KHU VỰC THANH TOÁN
         JPanel checkoutPanel = new JPanel();
         checkoutPanel.setLayout(new BoxLayout(checkoutPanel, BoxLayout.Y_AXIS));
         checkoutPanel.setBackground(COL_WHITE);
-        checkoutPanel.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(230, 230, 230)), new EmptyBorder(15, 20, 15, 20)));
+        checkoutPanel.setBorder(BorderFactory.createCompoundBorder(new LineBorder(new Color(230, 230, 230)), new EmptyBorder(15, 20, 15, 20)));
 
         JPanel pnlKH = new JPanel(new BorderLayout(10, 0));
         pnlKH.setOpaque(false);
         txtSDT = new JTextField();
-        txtSDT.setPreferredSize(new Dimension(0, 35));
         JButton btnCheck = new JButton("Check");
         styleButton(btnCheck, COL_SIDEBAR, 80);
         pnlKH.add(new JLabel("SĐT: "), BorderLayout.WEST);
@@ -168,32 +153,45 @@ public class BanHangGUI extends JPanel {
         pnlKH.add(btnCheck, BorderLayout.EAST);
 
         lblTenKhach = new JLabel("Khách: Vãng lai");
-        lblTenKhach.setFont(new Font("Segoe UI", Font.ITALIC, 13));
+
+        JPanel pnlPromo = new JPanel(new BorderLayout(10, 0));
+        pnlPromo.setOpaque(false);
+        txtMaGiamGia = new JTextField();
+        JButton btnApply = new JButton("Áp dụng");
+        styleButton(btnApply, COL_SIDEBAR, 80);
+        pnlPromo.add(new JLabel("Mã KM: "), BorderLayout.WEST);
+        pnlPromo.add(txtMaGiamGia, BorderLayout.CENTER);
+        pnlPromo.add(btnApply, BorderLayout.EAST);
 
         lblTongTien = new JLabel("Tổng cộng: 0 VNĐ");
-        lblTongTien.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        lblGiamGia = new JLabel("Giảm giá: 0 VNĐ");
+        lblGiamGia.setForeground(new Color(46, 204, 113));
         lblThanhToan = new JLabel("CẦN TRẢ: 0 VNĐ");
-        lblThanhToan.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblThanhToan.setFont(new Font("Segoe UI", Font.BOLD, 22));
         lblThanhToan.setForeground(COL_PRIMARY);
 
+        cbxPhuongThucThanhToan = new JComboBox<>(new String[]{"Tiền mặt", "Chuyển khoản / Quẹt thẻ"});
+
         JButton btnPay = new JButton("XÁC NHẬN THANH TOÁN");
-        btnPay.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        btnPay.setUI(new javax.swing.plaf.basic.BasicButtonUI());
         btnPay.setBackground(COL_PRIMARY);
         btnPay.setForeground(COL_WHITE);
         btnPay.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        btnPay.setFocusPainted(false);
-        btnPay.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnPay.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
         btnPay.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         checkoutPanel.add(pnlKH);
-        checkoutPanel.add(Box.createVerticalStrut(5));
         checkoutPanel.add(lblTenKhach);
-        checkoutPanel.add(Box.createVerticalStrut(15));
-        checkoutPanel.add(new JSeparator());
-        checkoutPanel.add(Box.createVerticalStrut(15));
-        checkoutPanel.add(lblTongTien);
         checkoutPanel.add(Box.createVerticalStrut(10));
+        checkoutPanel.add(pnlPromo);
+        checkoutPanel.add(Box.createVerticalStrut(10));
+        checkoutPanel.add(new JSeparator());
+        checkoutPanel.add(lblTongTien);
+        checkoutPanel.add(lblGiamGia);
         checkoutPanel.add(lblThanhToan);
+        checkoutPanel.add(Box.createVerticalStrut(10));
+        checkoutPanel.add(new JLabel("PTTT:"));
+        checkoutPanel.add(cbxPhuongThucThanhToan);
         checkoutPanel.add(Box.createVerticalStrut(20));
         checkoutPanel.add(btnPay);
 
@@ -201,13 +199,14 @@ public class BanHangGUI extends JPanel {
         posPanel.add(leftPanel, BorderLayout.CENTER);
         posPanel.add(rightPanel, BorderLayout.EAST);
 
-        btnXoa.addActionListener(e -> {
-            int row = tblCart.getSelectedRow();
-            if (row != -1) { dsGioHang.remove(row); capNhatBangGioHang(); }
-        });
         btnAddCart.addActionListener(e -> handlingAddToCart());
-        btnPay.addActionListener(e -> handlingPayment());
         btnCheck.addActionListener(e -> checkCustomer());
+        btnApply.addActionListener(e -> handlingApplyPromo());
+        btnPay.addActionListener(e -> handlingPayment());
+        btnXoa.addActionListener(e -> {
+            int r = tblCart.getSelectedRow();
+            if(r != -1) { dsGioHang.remove(r); capNhatBangGioHang(); }
+        });
 
         return posPanel;
     }
@@ -218,165 +217,214 @@ public class BanHangGUI extends JPanel {
         onlinePanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
         String[] onlineCols = {"Mã HĐ", "Khách Hàng", "Ngày Đặt", "Tổng Tiền", "Trạng Thái"};
-        onlineModel = new DefaultTableModel(onlineCols, 0);
+        onlineModel = new DefaultTableModel(onlineCols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
         tblOnline = new JTable(onlineModel);
-
-        // Cập nhật Style: Cột 1 (Khách hàng) nằm trái, Cột 4 (Trạng thái) tô màu
         styleTable(tblOnline, new int[]{1}, 4);
 
         JScrollPane scroll = new JScrollPane(tblOnline);
         scroll.setBorder(new LineBorder(new Color(230, 230, 230)));
-        onlinePanel.add(new JLabel("Danh sách đơn Online chờ duyệt", JLabel.CENTER), BorderLayout.NORTH);
+
+        JPanel pnlTop = new JPanel(new BorderLayout());
+        pnlTop.setOpaque(false);
+        JLabel lblTitle = new JLabel("DANH SÁCH ĐƠN HÀNG ONLINE CHỜ DUYỆT", JLabel.LEFT);
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        pnlTop.add(lblTitle, BorderLayout.WEST);
+
+        JButton btnDuyet = new JButton("DUYỆT ĐƠN ĐÃ CHỌN");
+        styleButton(btnDuyet, COL_PRIMARY, 180);
+        pnlTop.add(btnDuyet, BorderLayout.EAST);
+
+        onlinePanel.add(pnlTop, BorderLayout.NORTH);
         onlinePanel.add(scroll, BorderLayout.CENTER);
+
+        btnDuyet.addActionListener(e -> handlingDuyetDonOnline());
+
         return onlinePanel;
     }
 
-    // ========================================================
-    // HÀM STYLE BẢNG CHUẨN (Fix căn lề & Tô màu trạng thái)
-    // ========================================================
-    private void styleTable(JTable table, int[] leftCols, int statusCol) {
-        table.setFocusable(false);
-        table.setIntercellSpacing(new Dimension(0, 0));
-        table.setSelectionBackground(new Color(232, 240, 255));
-        table.setSelectionForeground(Color.BLACK);
-        table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        table.setRowHeight(40);
-        table.setShowVerticalLines(false);
-        table.setGridColor(new Color(240, 240, 240));
+    private void loadDonOnline() {
+        onlineModel.setRowCount(0);
+        List<Object[]> list = banHangBUS.getDonOnlinePending();
+        for (Object[] obj : list) {
+            onlineModel.addRow(obj);
+        }
+    }
 
-        // Style Header: Luôn ở giữa
-        JTableHeader header = table.getTableHeader();
-        header.setBackground(new Color(245, 245, 250));
-        header.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        header.setOpaque(false);
-        header.setForeground(Color.BLACK);
-        header.setPreferredSize(new Dimension(0, 40));
-        ((DefaultTableCellRenderer) header.getDefaultRenderer()).setHorizontalAlignment(JLabel.CENTER);
+    private void handlingDuyetDonOnline() {
+        int row = tblOnline.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn đơn hàng cần duyệt!");
+            return;
+        }
+        String maHD = tblOnline.getValueAt(row, 0).toString();
+        if (banHangBUS.duyetDonOnline(maHD, currentUser.getTenDangNhap())) {
+            JOptionPane.showMessageDialog(this, "Đã duyệt đơn hàng " + maHD);
+            loadDonOnline();
+        }
+    }
 
-        // Renderer căn giữa
-        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+    private void handlingPayment() {
+        if (dsGioHang.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Giỏ hàng đang trống!");
+            return;
+        }
 
-        // Renderer căn trái (có thụt lề 10px)
-        DefaultTableCellRenderer leftRenderer = new DefaultTableCellRenderer();
-        leftRenderer.setHorizontalAlignment(JLabel.LEFT);
-        leftRenderer.setBorder(new javax.swing.border.EmptyBorder(0, 10, 0, 0));
+        BigDecimal tong = BigDecimal.ZERO;
+        for(ChiTietHoaDonDTO ct : dsGioHang) tong = tong.add(ct.getThanhTien());
 
-        // Renderer tô màu trạng thái
-        DefaultTableCellRenderer statusRenderer = new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                setHorizontalAlignment(JLabel.CENTER);
-                if (value != null) {
-                    String val = value.toString().toUpperCase();
-                    if (val.contains("ĐANG BÁN") || val.contains("HOÀN THÀNH") || val.contains("ĐÃ DUYỆT") || val.equals("HOATDONG")) {
-                        c.setForeground(new Color(46, 204, 113)); // Xanh lá
-                        setFont(getFont().deriveFont(Font.BOLD));
-                    } else if (val.contains("CHỜ") || val.contains("PENDING")) {
-                        c.setForeground(new Color(241, 196, 15)); // Vàng
-                        setFont(getFont().deriveFont(Font.BOLD));
-                    } else {
-                        c.setForeground(new Color(231, 76, 60)); // Đỏ
-                        setFont(getFont().deriveFont(Font.BOLD));
-                    }
+        BigDecimal thucThu = tong.subtract(soTienDuocGiam);
+        if (thucThu.compareTo(BigDecimal.ZERO) < 0) thucThu = BigDecimal.ZERO;
+
+        String ptttStr = cbxPhuongThucThanhToan.getSelectedItem().toString();
+        PhuongThucThanhToan phuongThucEnum = ptttStr.contains("Tiền mặt") ? PhuongThucThanhToan.TienMat : PhuongThucThanhToan.ChuyenKhoan;
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Xác nhận thanh toán " + df.format(thucThu) + " VNĐ\nHình thức: " + ptttStr + "?",
+                "Xác nhận đơn hàng", JOptionPane.YES_NO_OPTION);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            Integer maKM = (kmApDung != null) ? kmApDung.getMaKM() : null;
+
+            boolean thanhCong = banHangBUS.thanhToanHoaDon(currentUser.getMaNhanVien(), currentCustomerId, maKM, dsGioHang, tong.doubleValue(), soTienDuocGiam.doubleValue(), thucThu.doubleValue(), phuongThucEnum);
+
+            if (thanhCong) {
+                JOptionPane.showMessageDialog(this, "Thanh toán thành công!");
+                int inPhieu = JOptionPane.showConfirmDialog(this, "Bạn có muốn in hóa đơn không?", "In Hóa Đơn", JOptionPane.YES_NO_OPTION);
+                if (inPhieu == JOptionPane.YES_OPTION) {
+                    xuatHoaDonPDF(tong, soTienDuocGiam, thucThu, ptttStr);
                 }
-                if (isSelected) c.setForeground(table.getSelectionForeground());
-                return c;
-            }
-        };
-
-        // Áp dụng renderer cho từng cột
-        for (int i = 0; i < table.getColumnCount(); i++) {
-            if (i == statusCol) {
-                table.getColumnModel().getColumn(i).setCellRenderer(statusRenderer);
+                resetForm();
             } else {
-                boolean isLeft = false;
-                for (int col : leftCols) { if (i == col) { isLeft = true; break; } }
-                if (isLeft) table.getColumnModel().getColumn(i).setCellRenderer(leftRenderer);
-                else table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+                JOptionPane.showMessageDialog(this, "Thanh toán thất bại! Vui lòng kiểm tra lại hệ thống.", "Lỗi", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
+    private void xuatHoaDonPDF(BigDecimal tong, BigDecimal giam, BigDecimal thucThu, String pttt) {
+        try {
+            String path = "HoaDon_" + System.currentTimeMillis() + ".pdf";
+            Document document = new Document();
+            PdfWriter.getInstance(document, new FileOutputStream(path));
+            document.open();
+            BaseFont bf = BaseFont.createFont("c:\\windows\\fonts\\arial.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            com.itextpdf.text.Font fontTitle = new com.itextpdf.text.Font(bf, 18, com.itextpdf.text.Font.BOLD, BaseColor.MAGENTA);
+            com.itextpdf.text.Font fontHeader = new com.itextpdf.text.Font(bf, 12, com.itextpdf.text.Font.BOLD);
+            com.itextpdf.text.Font fontNormal = new com.itextpdf.text.Font(bf, 12, com.itextpdf.text.Font.NORMAL);
+            Paragraph title = new Paragraph("HÓA ĐƠN BÁN LẺ", fontTitle); title.setAlignment(Element.ALIGN_CENTER); document.add(title);
+            document.add(new Paragraph("Nhân viên: " + currentUser.getTenDangNhap(), fontNormal));
+            document.add(new Paragraph("Khách hàng: " + lblTenKhach.getText(), fontNormal));
+            document.add(new Paragraph("Ngày: " + LocalDate.now().toString(), fontNormal));
+            document.add(new Paragraph("PTTT: " + pttt, fontNormal));
+            document.add(new Paragraph("---------------------------------------------------------", fontNormal));
+            PdfPTable pdfTable = new PdfPTable(4); pdfTable.setWidthPercentage(100);
+            pdfTable.addCell(new PdfPCell(new Phrase("Tên Sách", fontHeader)));
+            pdfTable.addCell(new PdfPCell(new Phrase("SL", fontHeader)));
+            pdfTable.addCell(new PdfPCell(new Phrase("Đơn Giá", fontHeader)));
+            pdfTable.addCell(new PdfPCell(new Phrase("Thành Tiền", fontHeader)));
+            for (ChiTietHoaDonDTO ct : dsGioHang) {
+                pdfTable.addCell(new PdfPCell(new Phrase(ct.getTenSach(), fontNormal)));
+                pdfTable.addCell(new PdfPCell(new Phrase(String.valueOf(ct.getSoLuong()), fontNormal)));
+                pdfTable.addCell(new PdfPCell(new Phrase(df.format(ct.getDonGia()), fontNormal)));
+                pdfTable.addCell(new PdfPCell(new Phrase(df.format(ct.getThanhTien()), fontNormal)));
+            }
+            document.add(pdfTable);
+            document.add(new Paragraph("Tổng cộng: " + df.format(tong) + " VNĐ", fontNormal));
+            document.add(new Paragraph("Khuyến mãi: -" + df.format(giam) + " VNĐ", fontNormal));
+            document.add(new Paragraph("THÀNH TIỀN: " + df.format(thucThu) + " VNĐ", fontHeader));
+            document.close();
+            java.awt.Desktop.getDesktop().open(new java.io.File(path));
+        } catch (Exception ex) { ex.printStackTrace(); }
+    }
+
+    private void resetForm() {
+        dsGioHang.clear(); kmApDung = null; soTienDuocGiam = BigDecimal.ZERO; currentCustomerId = null;
+        txtSDT.setText(""); txtMaGiamGia.setText(""); lblTenKhach.setText("Khách: Vãng lai");
+        capNhatBangGioHang(); loadDanhSachSach();
+    }
+
+    private void handlingApplyPromo() {
+        String code = txtMaGiamGia.getText().trim();
+        if (code.isEmpty()) { kmApDung = null; soTienDuocGiam = BigDecimal.ZERO; capNhatBangGioHang(); return; }
+        List<KhuyenMaiDTO> dsKM = kmBUS.getAll(); KhuyenMaiDTO found = null;
+        for (KhuyenMaiDTO km : dsKM) { if (km.getMaCode().equalsIgnoreCase(code) && km.getTrangThai().name().equals("HoatDong")) { found = km; break; } }
+        if (found == null) { JOptionPane.showMessageDialog(this, "Mã không hợp lệ hoặc hết hạn!"); return; }
+        BigDecimal tongHang = BigDecimal.ZERO;
+        for (ChiTietHoaDonDTO ct : dsGioHang) tongHang = tongHang.add(ct.getThanhTien());
+        if (tongHang.compareTo(found.getDonHangToiThieu()) < 0) { JOptionPane.showMessageDialog(this, "Đơn hàng tối thiểu phải từ " + df.format(found.getDonHangToiThieu()) + " VNĐ"); return; }
+        kmApDung = found; JOptionPane.showMessageDialog(this, "Áp dụng thành công: " + found.getTenKM()); capNhatBangGioHang();
+    }
+
+    private void capNhatBangGioHang() {
+        cartModel.setRowCount(0); BigDecimal tongHang = BigDecimal.ZERO;
+        for (ChiTietHoaDonDTO ct : dsGioHang) {
+            cartModel.addRow(new Object[]{ ct.getTenSach(), ct.getSoLuong(), df.format(ct.getDonGia()), df.format(ct.getThanhTien()) });
+            tongHang = tongHang.add(ct.getThanhTien());
+        }
+        soTienDuocGiam = BigDecimal.ZERO;
+        if (kmApDung != null) {
+            if (kmApDung.getSoTienGiam().compareTo(BigDecimal.ZERO) > 0) soTienDuocGiam = kmApDung.getSoTienGiam();
+            else soTienDuocGiam = tongHang.multiply(kmApDung.getPhanTramGiam()).divide(new BigDecimal("100"));
+        }
+        BigDecimal thanhToanCuoi = tongHang.subtract(soTienDuocGiam);
+        lblTongTien.setText("Tổng hàng: " + df.format(tongHang) + " VNĐ");
+        lblGiamGia.setText("Khuyến mãi: -" + df.format(soTienDuocGiam) + " VNĐ");
+        lblThanhToan.setText("CẦN TRẢ: " + df.format(thanhToanCuoi) + " VNĐ");
+    }
+
     private void styleButton(JButton btn, Color bgColor, int width) {
-        btn.setBackground(bgColor);
-        btn.setForeground(COL_WHITE);
+        btn.setUI(new javax.swing.plaf.basic.BasicButtonUI());
+        btn.setBackground(bgColor); btn.setForeground(COL_WHITE);
         btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setOpaque(true);
+        btn.setOpaque(true); btn.setBorderPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.setPreferredSize(new Dimension(width, 35));
     }
 
-    // ========================================================
-    // LOGIC XỬ LÝ (BigDecimal & DTO)
-    // ========================================================
+    private void styleTable(JTable table, int[] leftCols, int statusCol) {
+        table.setRowHeight(40); table.setSelectionBackground(new Color(232, 240, 255));
+        JTableHeader header = table.getTableHeader();
+        header.setPreferredSize(new Dimension(0, 40));
+        header.setFont(new Font("Segoe UI", Font.BOLD, 13));
+
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+        for(int i=0; i<table.getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        }
+    }
+
     private void loadDanhSachSach() {
         bookModel.setRowCount(0);
-        List<SachDTO> listSach = sachBUS.getAll();
-        for (SachDTO sach : listSach) {
-            if (sach.getTrangThai() == TrangThaiSach.DangBan) {
-                bookModel.addRow(new Object[]{
-                        sach.getMaSachCode(), sach.getTenSach(), df.format(sach.getGiaBan()), sach.getSoLuongTon()
-                });
-            }
+        List<SachDTO> list = sachBUS.getAll();
+        for (SachDTO s : list) {
+            if (s.getTrangThai() == TrangThaiSach.DangBan)
+                bookModel.addRow(new Object[]{s.getMaSachCode(), s.getTenSach(), df.format(s.getGiaBan()), s.getSoLuongTon()});
         }
     }
 
     private void checkCustomer() {
-        String phone = txtSDT.getText().trim();
-        KhachHangDTO kh = khachHangBUS.getKhachHangByPhone(phone);
+        KhachHangDTO kh = khachHangBUS.getKhachHangByPhone(txtSDT.getText().trim());
         if (kh != null) {
             currentCustomerId = kh.getMaKH();
             lblTenKhach.setText("Khách: " + kh.getHoTen());
             lblTenKhach.setForeground(COL_PRIMARY);
         } else {
             currentCustomerId = null;
-            lblTenKhach.setText("Khách: Vãng lai / Không tìm thấy");
+            lblTenKhach.setText("Khách: Vãng lai");
             lblTenKhach.setForeground(Color.RED);
         }
     }
 
     private void handlingAddToCart() {
         int row = tblBooks.getSelectedRow();
-        if (row == -1) { JOptionPane.showMessageDialog(this, "Chọn sách trên bảng trước!"); return; }
+        if (row == -1) return;
         String maSach = tblBooks.getValueAt(row, 0).toString();
         try {
             int sl = Integer.parseInt(txtSoLuong.getText());
-            if (banHangBUS.themVaoGioHang(maSach, sl, dsGioHang)) {
-                capNhatBangGioHang();
-                txtSoLuong.setText("1");
-            } else { JOptionPane.showMessageDialog(this, "Không đủ kho!"); }
-        } catch (Exception e) { JOptionPane.showMessageDialog(this, "Số lượng không hợp lệ!"); }
-    }
-
-    private void handlingPayment() {
-        if (dsGioHang.isEmpty()) return;
-        double tong = 0;
-        for(ChiTietHoaDonDTO ct : dsGioHang) tong += ct.getThanhTien().doubleValue();
-
-        if (banHangBUS.thanhToanHoaDon(currentUser.getMaNhanVien(), currentCustomerId, null, dsGioHang, tong, 0, tong)) {
-            JOptionPane.showMessageDialog(this, "Thanh toán thành công!");
-            dsGioHang.clear();
-            capNhatBangGioHang();
-            loadDanhSachSach();
-        }
-    }
-
-    private void capNhatBangGioHang() {
-        cartModel.setRowCount(0);
-        java.math.BigDecimal tong = java.math.BigDecimal.ZERO;
-        for (ChiTietHoaDonDTO ct : dsGioHang) {
-            java.math.BigDecimal thanhTienRow = ct.getThanhTien();
-            if (thanhTienRow == null) {
-                thanhTienRow = ct.getDonGia().multiply(new java.math.BigDecimal(ct.getSoLuong()));
-            }
-            cartModel.addRow(new Object[]{ ct.getTenSach(), ct.getSoLuong(), df.format(ct.getDonGia()), df.format(thanhTienRow) });
-            tong = tong.add(thanhTienRow);
-        }
-        lblTongTien.setText("Tổng cộng: " + df.format(tong) + " VNĐ");
-        lblThanhToan.setText("CẦN TRẢ: " + df.format(tong) + " VNĐ");
+            if (banHangBUS.themVaoGioHang(maSach, sl, dsGioHang)) capNhatBangGioHang();
+            else JOptionPane.showMessageDialog(this, "Không đủ kho!");
+        } catch (Exception e) {}
     }
 }

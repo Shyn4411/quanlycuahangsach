@@ -1,6 +1,13 @@
 package bus;
 import dao.NhanVienDAO;
+import dto.KhachHangDTO;
 import dto.NhanVienDTO;
+import utils.JDBCUtil;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 
 public class NhanVienBUS {
@@ -59,6 +66,11 @@ public class NhanVienBUS {
             return "Thành công: Đã xóa nhân viên (hoặc ngừng hoạt động)!";
         }
         return "Lỗi: Thao tác thất bại!";
+    }
+
+    public NhanVienDTO getById(int maNV) {
+        if (maNV <= 0) return null;
+        return nhanVienDAO.getByID(maNV);
     }
 
 }

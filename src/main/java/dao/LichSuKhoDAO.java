@@ -142,4 +142,25 @@ public class LichSuKhoDAO {
         }
         return ds;
     }
+
+    public String getLyDoHuyDon(int maHD) {
+        String sql = "SELECT GhiChu FROM LichSuKho WHERE LoaiChungTu = 'HOADON' AND MaChungTu = ? AND LoaiGiaoDich = HUY_BAN_HANG LIMIT 1";
+        try (Connection conn = JDBCUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, maHD);
+            try (ResultSet rs= ps.executeQuery()){
+                if (rs.next()) {
+                    String ghiChu = rs.getString("GhiChu");
+
+                    if (ghiChu != null && ghiChu.contains("- Lý do: ")) {
+                        return ghiChu.split("- Lý do: ")[1];
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return "Không có lý do";
+    }
 }

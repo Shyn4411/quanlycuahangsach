@@ -79,4 +79,9 @@ public class KhachHangBUS {
         return khachHangDAO.getKhachHangByPhone(phone.trim());
     }
 
+    public KhachHangDTO getKhachHangById(int maKH) {
+        if (maKH <= 0) return null;
+        return khachHangDAO.getKhachHangById(maKH);
+    }
+
 }

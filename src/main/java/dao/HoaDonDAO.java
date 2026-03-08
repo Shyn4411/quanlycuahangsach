@@ -132,4 +132,43 @@ public class HoaDonDAO {
         }
         return false;
     }
+
+    public HoaDonDTO getById(int maHD) {
+        String sql = "SELECT MaHD, MaNV, MaKH, MaKM, TongTien, TienGiam, ThanhTien, LoaiHoaDon, TrangThai, NgayTao FROM HoaDon WHERE MaHD = ?";
+        try (java.sql.Connection conn = utils.JDBCUtil.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, maHD);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    dto.HoaDonDTO hd = new dto.HoaDonDTO();
+                    hd.setMaHD(rs.getInt("MaHD"));
+
+                    int maNV = rs.getInt("MaNV");
+                    hd.setMaNV(rs.wasNull() ? null : maNV);
+
+                    int maKH = rs.getInt("MaKH");
+                    hd.setMaKH(rs.wasNull() ? null : maKH);
+
+                    int maKM = rs.getInt("MaKM");
+                    hd.setMaKM(rs.wasNull() ? null : maKM);
+
+                    hd.setTongTien(rs.getBigDecimal("TongTien"));
+                    hd.setTienGiam(rs.getBigDecimal("TienGiam"));
+                    hd.setThanhTien(rs.getBigDecimal("ThanhTien"));
+                    hd.setLoaiHoaDon(enums.LoaiHoaDon.valueOf(rs.getString("LoaiHoaDon")));
+                    hd.setTrangThai(enums.TrangThaiGiaoDich.valueOf(rs.getString("TrangThai")));
+
+                    java.sql.Timestamp tsNgayTao = rs.getTimestamp("NgayTao");
+                    if (tsNgayTao != null) {
+                        hd.setNgayTao(tsNgayTao.toLocalDateTime());
+                    }
+                    return hd;
+                }
+            }
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

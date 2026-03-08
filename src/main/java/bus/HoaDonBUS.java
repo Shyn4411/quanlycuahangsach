@@ -8,12 +8,13 @@ import dto.ChiTietHoaDonDTO;
 import dto.HoaDonDTO;
 import dto.LichSuKhoDTO;
 import enums.LoaiGiaoDich;
+import enums.PhuongThucThanhToan;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class HoaDonBUS {
 
+    private dao.ThanhToanDAO thanhToanDAO = new dao.ThanhToanDAO();
     private HoaDonDAO hoaDonDAO = new HoaDonDAO();
     private ChiTietHoaDonDAO chiTietHoaDonDAO = new ChiTietHoaDonDAO();
     private SachDAO sachDAO = new SachDAO();
@@ -23,16 +24,29 @@ public class HoaDonBUS {
         return hoaDonDAO.getAll();
     }
 
-    public String addHoaDon(HoaDonDTO hoaDon, List<ChiTietHoaDonDTO> danhSachCTHD) {
-        if (hoaDon.getMaNV() <= 0) {
+    public String addHoaDon(HoaDonDTO hoaDon, List<ChiTietHoaDonDTO> danhSachCTHD, PhuongThucThanhToan pttt) {
+        if (hoaDon.getMaNV() != null && hoaDon.getMaNV() <= 0) {
             return "Lỗi: Nhân viên không hợp lệ!";
         }
         if (danhSachCTHD == null || danhSachCTHD.isEmpty()) {
             return "Lỗi: Hóa đơn phải có ít nhất 1 sản phẩm!";
         }
+
         int maHoaDonMoi = hoaDonDAO.insert(hoaDon);
 
         if (maHoaDonMoi > 0) {
+
+            // --- 2. THÊM ĐOẠN LƯU GIAO DỊCH THANH TOÁN VÀO DB ---
+            dto.ThanhToanDTO tt = new dto.ThanhToanDTO();
+            tt.setMaHD(maHoaDonMoi);
+            tt.setPhuongThuc(pttt); // Lấy chữ 'TienMat' hoặc 'ChuyenKhoan' từ Enum
+            tt.setSoTien(hoaDon.getThanhTien());
+            tt.setGhiChuGiaoDich("Thanh toán tại quầy");
+
+            thanhToanDAO.insert(tt);
+            // ---------------------------------------------------
+
+            // 3. CODE TRỪ KHO CỦA ÔNG (Giữ nguyên không sai một ly)
             for (ChiTietHoaDonDTO chiTietHoaDon : danhSachCTHD) {
                 chiTietHoaDon.setMaHD(maHoaDonMoi);
                 chiTietHoaDonDAO.insert(chiTietHoaDon);
@@ -55,7 +69,7 @@ public class HoaDonBUS {
         return "Lỗi: Không thể tạo hóa đơn!";
     }
 
-    public String deleteHoaDon(int maHoaDon) {
+    public String deleteHoaDon(int maHoaDon, String lyDoHuy) {
         if (hoaDonDAO.delete(maHoaDon)) {
 
             List<ChiTietHoaDonDTO> dsChiTiet = chiTietHoaDonDAO.getByMaHD(maHoaDon);
@@ -70,7 +84,7 @@ public class HoaDonBUS {
                 lichSu.setLoaiChungTu(enums.LoaiChungTu.HOADON);
                 lichSu.setMaChungTu(maHoaDon);
                 lichSu.setSoLuongThayDoi(ds.getSoLuong());
-                lichSu.setGhiChu("Hoàn kho do hủy đơn " + String.format("HD%03d", maHoaDon));
+                lichSu.setGhiChu("Hoàn kho do hủy đơn " + String.format("HD%03d", maHoaDon) + " - Lý do: " + lyDoHuy);
 
                 lichSuKhoDAO.insert(lichSu);
             }
@@ -137,4 +151,10 @@ public class HoaDonBUS {
         }
         return dsHoaDon;
     }
+
+    public dto.HoaDonDTO getHoaDonById(int maHD) {
+        if (maHD <= 0) return null;
+        return hoaDonDAO.getById(maHD);
+    }
+
 }

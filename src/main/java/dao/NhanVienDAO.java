@@ -15,7 +15,7 @@ public class NhanVienDAO {
 
     public List<NhanVienDTO> getAll() {
         List<NhanVienDTO> list = new ArrayList<>();
-        String sql = "SELECT MaNV, MaTaiKhoan, MaNVCode, HoTen, SoDienThoai FROM NhanVien";
+        String sql = "SELECT MaNV, MaTaiKhoan, HoTen, SoDienThoai FROM NhanVien";
 
         try (Connection conn = JDBCUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -25,7 +25,6 @@ public class NhanVienDAO {
                 NhanVienDTO nhanVienDTO = new NhanVienDTO();
                 nhanVienDTO.setMaNV(rs.getInt("MaNV"));
                 nhanVienDTO.setMaTaiKhoan(rs.getInt("MaTaiKhoan"));
-                nhanVienDTO.setMaNVCode(rs.getString("MaNVCode"));
                 nhanVienDTO.setHoTen(rs.getString("HoTen"));
                 nhanVienDTO.setSoDienThoai(rs.getString("SoDienThoai"));
                 list.add(nhanVienDTO);
@@ -37,15 +36,14 @@ public class NhanVienDAO {
     }
 
     public boolean insert(NhanVienDTO nhanVienDTO) {
-        String sql = "INSERT INTO NhanVien (MaTaiKhoan, MaNVCode, HoTen, SoDienThoai) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO NhanVien (MaTaiKhoan, MaNVCode, HoTen, SoDienThoai) VALUES (?, ?, ?)";
 
         try (Connection conn = JDBCUtil.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, nhanVienDTO.getMaTaiKhoan());
-            ps.setString(2, nhanVienDTO.getMaNVCode());
-            ps.setString(3, nhanVienDTO.getHoTen());
-            ps.setString(4, nhanVienDTO.getSoDienThoai());
+            ps.setString(2, nhanVienDTO.getHoTen());
+            ps.setString(3, nhanVienDTO.getSoDienThoai());
 
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -56,16 +54,15 @@ public class NhanVienDAO {
 
 
     public boolean update(NhanVienDTO nhanVienDTO) {
-        String sql = "UPDATE NhanVien SET MaTaiKhoan = ?, MaNVCode = ?, HoTen = ?, SoDienThoai = ? WHERE MaNV = ?";
+        String sql = "UPDATE NhanVien SET MaTaiKhoan = ?, HoTen = ?, SoDienThoai = ? WHERE MaNV = ?";
 
         try (Connection conn = JDBCUtil.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, nhanVienDTO.getMaTaiKhoan());
-            ps.setString(2, nhanVienDTO.getMaNVCode());
-            ps.setString(3, nhanVienDTO.getHoTen());
-            ps.setString(4, nhanVienDTO.getSoDienThoai());
-            ps.setInt(5, nhanVienDTO.getMaNV());
+            ps.setString(2, nhanVienDTO.getHoTen());
+            ps.setString(3, nhanVienDTO.getSoDienThoai());
+            ps.setInt(4, nhanVienDTO.getMaNV());
 
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -121,6 +118,29 @@ public class NhanVienDAO {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public NhanVienDTO getByID(int maNV) {
+        String sql = "SELECT * FROM NhanVien WHERE MaNV = ?";
+
+        try (Connection conn = JDBCUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, maNV);
+            try (ResultSet rs = ps.executeQuery()) {
+
+                if (rs.next()) {
+                    NhanVienDTO nhanVienDTO = new NhanVienDTO();
+                    nhanVienDTO.setMaNV(rs.getInt("MaNV"));
+                    nhanVienDTO.setHoTen(rs.getString("HoTen"));
+                    nhanVienDTO.setSoDienThoai(rs.getString("SoDienThoai"));
+                    return nhanVienDTO;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
 }

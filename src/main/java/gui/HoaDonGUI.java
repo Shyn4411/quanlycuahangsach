@@ -1,6 +1,10 @@
 package gui;
 
+import bus.KhachHangBUS;
+import bus.NhanVienBUS;
 import dto.HoaDonDTO;
+import dto.KhachHangDTO;
+import dto.NhanVienDTO;
 import dto.TaiKhoanDTO;
 import enums.TrangThaiGiaoDich;
 
@@ -17,19 +21,21 @@ import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 
-// Import thư viện JCalendar
+
 import com.toedter.calendar.JDateChooser;
 
 public class HoaDonGUI extends JPanel {
 
     private TaiKhoanDTO currentUser;
+    private NhanVienBUS nhanVienBUS = new NhanVienBUS();
+    private KhachHangBUS  khachHangBUS = new KhachHangBUS();
 
     private bus.HoaDonBUS hdBUS = new bus.HoaDonBUS();
 
     private JTable tblHoaDon;
     private DefaultTableModel modelHoaDon;
 
-    // UI Lọc & Thao tác mới
+
     private JTextField txtTimKiem;
     private JComboBox<String> cbxTrangThai;
     private JDateChooser txtTuNgay, txtDenNgay;
@@ -54,14 +60,10 @@ public class HoaDonGUI extends JPanel {
         setLayout(new BorderLayout(15, 15));
         setBackground(COL_BG_MAIN);
         setBorder(new EmptyBorder(20, 20, 20, 20));
-
-        // ==========================================
-        // 1. KHU VỰC TOP (BỘ LỌC + NÚT THAO TÁC)
-        // ==========================================
         JPanel pnlTop = new JPanel(new BorderLayout(10, 10));
         pnlTop.setOpaque(false);
 
-        // Container chứa 2 dòng lọc
+
         JPanel pnlFilterContainer = new JPanel(new GridLayout(2, 1, 0, 10));
         pnlFilterContainer.setBackground(COL_WHITE);
         pnlFilterContainer.setBorder(BorderFactory.createCompoundBorder(
@@ -69,7 +71,6 @@ public class HoaDonGUI extends JPanel {
                 new EmptyBorder(10, 10, 10, 10)
         ));
 
-        // --- Dòng 1: Tìm kiếm (Mã/Tên) và Trạng Thái ---
         JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
         row1.setBackground(COL_WHITE);
 
@@ -88,7 +89,6 @@ public class HoaDonGUI extends JPanel {
         cbxTrangThai.setPreferredSize(new Dimension(120, 32));
         row1.add(cbxTrangThai);
 
-        // --- Dòng 2: Khoảng ngày và Các nút bấm ---
         JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
         row2.setBackground(COL_WHITE);
 
@@ -104,7 +104,6 @@ public class HoaDonGUI extends JPanel {
         txtDenNgay.setPreferredSize(new Dimension(130, 32));
         row2.add(txtDenNgay);
 
-        // Đẩy các nút Lọc, Làm mới, Xem chi tiết, Hủy về bên phải của dòng 2
         JPanel pnlButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         pnlButtons.setBackground(COL_WHITE);
 
@@ -122,22 +121,18 @@ public class HoaDonGUI extends JPanel {
 
         pnlButtons.add(btnLoc);
         pnlButtons.add(btnLamMoi);
-        pnlButtons.add(new JLabel(" | ")); // Dấu vạch ngăn cách cho đẹp
+        pnlButtons.add(new JLabel(" | "));
         pnlButtons.add(btnXemChiTiet);
         pnlButtons.add(btnHuyDon);
 
         row2.add(pnlButtons);
 
-        // Add 2 dòng vào container
         pnlFilterContainer.add(row1);
         pnlFilterContainer.add(row2);
 
         pnlTop.add(pnlFilterContainer, BorderLayout.CENTER);
         add(pnlTop, BorderLayout.NORTH);
 
-        // ==========================================
-        // 2. KHU VỰC BẢNG HIỂN THỊ
-        // ==========================================
         String[] cols = {"Mã HD", "Nhân Viên", "Khách Hàng", "Ngày Tạo", "Tổng Tiền", "Tiền Giảm", "Thành Tiền", "Trạng Thái"};
         modelHoaDon = new DefaultTableModel(new String[0][0], cols) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
@@ -168,10 +163,26 @@ public class HoaDonGUI extends JPanel {
         else if (hd.getTrangThai() == TrangThaiGiaoDich.ChoXuLy) strTrangThai = "Chờ Xử Lý";
         else if (hd.getTrangThai() == TrangThaiGiaoDich.DaHuy) strTrangThai = "Đã Hủy";
 
+        String tenNhanVien = "ADMIN";
+        if (hd.getMaNV() != null && hd.getMaNV() > 0) {
+            NhanVienDTO nv = nhanVienBUS.getById(hd.getMaNV());
+            if (nv != null) {
+                tenNhanVien = nv.getHoTen();
+            }
+        }
+
+        String tenKhachHang = "Khách vãng lai";
+        if (hd.getMaKH() != null && hd.getMaKH() > 0) {
+            KhachHangDTO kh = khachHangBUS.getKhachHangById(hd.getMaKH());
+            if (kh != null) {
+                tenKhachHang = kh.getHoTen();
+            }
+        }
+
         modelHoaDon.addRow(new Object[]{
                 "HD" + String.format("%03d", hd.getMaHD()),
-                hd.getMaNV(),
-                hd.getMaKH(), // Tạm hiện Mã KH, nếu có JOIN thì thay bằng Tên KH
+                tenNhanVien,
+                tenKhachHang,
                 hd.getNgayTao() != null ? hd.getNgayTao().format(dtf) : "",
                 df.format(hd.getTongTien()),
                 df.format(hd.getTienGiam()),
@@ -180,9 +191,6 @@ public class HoaDonGUI extends JPanel {
         });
     }
 
-    // ==========================================
-    // LOGIC LỌC TỔNG HỢP VÀ SỰ KIỆN CLICK
-    // ==========================================
     private void initEvents() {
         // 1. Lọc Dữ Liệu
         btnLoc.addActionListener(e -> {
@@ -200,19 +208,15 @@ public class HoaDonGUI extends JPanel {
             if (list != null) {
                 for (HoaDonDTO hd : list) {
                     String strHD = "hd" + String.format("%03d", hd.getMaHD());
-                    // Giả sử có Tên KH thì nối vào đây để tìm: String tenKH = getTenKHTuMa(hd.getMaKH()).toLowerCase();
-                    String searchTarget = strHD; // + " " + tenKH;
+                    String searchTarget = strHD;
 
                     String strTrangThai = "";
                     if (hd.getTrangThai() == TrangThaiGiaoDich.HoanThanh) strTrangThai = "Hoàn Thành";
                     else if (hd.getTrangThai() == TrangThaiGiaoDich.ChoXuLy) strTrangThai = "Chờ Xử Lý";
                     else if (hd.getTrangThai() == TrangThaiGiaoDich.DaHuy) strTrangThai = "Đã Hủy";
 
-                    // Kiểm tra chuỗi tìm kiếm
                     if (!keyword.isEmpty() && !searchTarget.contains(keyword)) continue;
-                    // Kiểm tra trạng thái
                     if (!trangThaiLoc.equals("Tất cả") && !strTrangThai.equals(trangThaiLoc)) continue;
-                    // Kiểm tra ngày
                     LocalDate logDate = hd.getNgayTao() != null ? hd.getNgayTao().toLocalDate() : null;
                     if (fromDate != null && logDate != null && logDate.isBefore(fromDate)) continue;
                     if (toDate != null && logDate != null && logDate.isAfter(toDate)) continue;
@@ -222,7 +226,6 @@ public class HoaDonGUI extends JPanel {
             }
         });
 
-        // 2. Làm mới
         btnLamMoi.addActionListener(e -> {
             txtTimKiem.setText("");
             cbxTrangThai.setSelectedIndex(0);
@@ -231,7 +234,6 @@ public class HoaDonGUI extends JPanel {
             loadDataToTable();
         });
 
-        // 3. Xem chi tiết
         btnXemChiTiet.addActionListener(e -> {
             int row = tblHoaDon.getSelectedRow();
             if (row < 0) {
@@ -244,7 +246,6 @@ public class HoaDonGUI extends JPanel {
             dialog.setVisible(true);
         });
 
-        // 4. Hủy đơn
         btnHuyDon.addActionListener(e -> {
             int row = tblHoaDon.getSelectedRow();
             if (row < 0) {
@@ -259,20 +260,34 @@ public class HoaDonGUI extends JPanel {
                 return;
             }
 
-            int confirm = JOptionPane.showConfirmDialog(this,
-                    "Bạn có chắc chắn muốn hủy hóa đơn " + maHDStr + " này?\nSách sẽ được hoàn lại vào kho.",
-                    "Cảnh báo", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-
-            if (confirm == JOptionPane.YES_OPTION) {
-                int maHD = Integer.parseInt(maHDStr.replaceAll("[^0-9]", ""));
-                String result = hdBUS.deleteHoaDon(maHD);
-                JOptionPane.showMessageDialog(this, result);
-                loadDataToTable();
+            if (trangThaiHienTai.equals("Đã Hủy")) {
+                JOptionPane.showMessageDialog(this, "Hóa đơn này đã được hủy trước đó!");
+                return;
             }
+
+            String[] options = {"Khách đổi ý", "Sai thông tin đơn hàng", "Khách bom hàng", "Lý do khác..."};
+            String lyDo = (String) JOptionPane.showInputDialog(
+                    this,
+                    "Bạn đang hủy hóa đơn " + maHDStr + "\nSách sẽ tự động hoàn lại vào kho.\nVui lòng chọn lý do:",
+                    "Xác nhận Hủy đơn",
+                    JOptionPane.WARNING_MESSAGE, null, options, options[0]);
+
+            if (lyDo == null || lyDo.trim().isEmpty()) {
+                return;
+            }
+
+            if (lyDo.equals("Lý do khác...")) {
+                lyDo = JOptionPane.showInputDialog(this, "Nhập lý do hủy đơn hàng: ");
+                if (lyDo == null || lyDo.trim().isEmpty()) {return;}
+            }
+            int maHD = Integer.parseInt(maHDStr.replaceAll("[^0-9]", ""));
+            String result = hdBUS.deleteHoaDon(maHD, lyDo);
+            JOptionPane.showMessageDialog(this, result);
+            loadDataToTable();
+
         });
     }
 
-    // --- HÀM TIỆN ÍCH TÚT GIAO DIỆN ---
     private void styleButton(JButton btn, Color bgColor, int width) {
         btn.setBackground(bgColor);
         btn.setForeground(COL_WHITE);
@@ -308,7 +323,6 @@ public class HoaDonGUI extends JPanel {
             table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
         }
 
-        // Tô màu cột Trạng Thái (Bây giờ là Cột số 7)
         table.getColumnModel().getColumn(7).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable t, Object v, boolean isS, boolean hasF, int r, int c) {

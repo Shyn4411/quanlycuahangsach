@@ -1,5 +1,9 @@
 package gui;
 
+import bus.HoaDonBUS;
+import bus.KhachHangBUS;
+import bus.NhanVienBUS;
+import dao.LichSuKhoDAO;
 import dto.ChiTietHoaDonDTO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -9,10 +13,12 @@ import javax.swing.table.JTableHeader;
 import java.awt.*;
 import java.text.DecimalFormat;
 import java.util.List;
-
-// Import thư viện iTextPDF
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.*;
+import dto.HoaDonDTO;
+import dto.KhachHangDTO;
+import dto.NhanVienDTO;
+
 import java.io.FileOutputStream;
 
 public class ChiTietHoaDonDialog extends JDialog {
@@ -21,10 +27,12 @@ public class ChiTietHoaDonDialog extends JDialog {
     private JTable tblChiTiet;
     private DefaultTableModel modelChiTiet;
     private JButton btnInPDF, btnDong;
-    private JLabel lblTongTien; // Thêm Label hiển thị tổng tiền
+    private JLabel lblTongTien;
 
-    // Khai báo BUS và Format tiền tệ
-    private bus.HoaDonBUS hoaDonBUS = new bus.HoaDonBUS();
+    private HoaDonBUS hoaDonBUS = new HoaDonBUS();
+    private NhanVienBUS nhanVienBUS = new NhanVienBUS();
+    private KhachHangBUS khachHangBUS = new KhachHangBUS();
+    private LichSuKhoDAO lichSuKhoDAO = new LichSuKhoDAO();
     private DecimalFormat df = new DecimalFormat("#,### VNĐ");
 
     final Color COL_PRIMARY = new Color(232, 60, 145);
@@ -39,32 +47,56 @@ public class ChiTietHoaDonDialog extends JDialog {
     }
 
     private void initUI() {
-        setSize(850, 600); // Kích thước bằng với Dialog Phiếu Nhập
+        setSize(850, 600);
         setLocationRelativeTo(getOwner());
         setLayout(new BorderLayout(10, 10));
         ((JPanel)getContentPane()).setBorder(new EmptyBorder(20, 20, 20, 20));
         getContentPane().setBackground(Color.WHITE);
 
-        // --- 1. THÔNG TIN CHUNG (TOP) ---
-        // Giả lập Panel thông tin chung cho giống Phiếu Nhập
-        JPanel pnlHeader = new JPanel(new GridLayout(2, 2, 20, 15));
+        JPanel pnlHeader = new JPanel(new GridLayout(3, 2, 20, 15)); // Chỉnh lại GridLayout 3 dòng
         pnlHeader.setBackground(Color.WHITE);
         pnlHeader.setBorder(BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(Color.LIGHT_GRAY),
-                " Thông tin chung ",
-                0, 0,
-                new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 13),
-                COL_SIDEBAR));
+                BorderFactory.createLineBorder(Color.LIGHT_GRAY), " Thông tin chung ",
+                0, 0, new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 13), COL_SIDEBAR));
 
-        // Tạm thời hiển thị mã hóa đơn, ngày in. Nếu Tủn có HoaDonDTO thì bổ sung thêm Nhân Viên, Khách Hàng vào đây
+        int idHD = Integer.parseInt(maHD.replaceAll("[^0-9]", ""));
+
+        HoaDonDTO hdCurrent = hoaDonBUS.getHoaDonById(idHD);
+
+
+        String tenNhanVien = "Admin (Hệ thống)";
+        if (hdCurrent != null && hdCurrent.getMaNV() != null && hdCurrent.getMaNV() > 0) {
+            NhanVienDTO nv = nhanVienBUS.getById(hdCurrent.getMaNV());
+            if (nv != null) tenNhanVien = nv.getHoTen();
+        }
+
+        String tenKhachHang = "Khách vãng lai";
+        if (hdCurrent != null && hdCurrent.getMaKH() != null && hdCurrent.getMaKH() > 0) {
+            KhachHangDTO kh = khachHangBUS.getKhachHangById(hdCurrent.getMaKH());
+            if (kh != null) tenKhachHang = kh.getHoTen();
+        }
+
         pnlHeader.add(createLabel("Mã hóa đơn: ", maHD));
         pnlHeader.add(createLabel("Ngày in: ", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))));
-        pnlHeader.add(createLabel("Nhân viên: ", "N/A")); // Thay thế bằng dữ liệu thật
-        pnlHeader.add(createLabel("Khách hàng: ", "N/A")); // Thay thế bằng dữ liệu thật
+
+        pnlHeader.add(createLabel("Nhân viên: ", tenNhanVien));
+        pnlHeader.add(createLabel("Khách hàng: ", tenKhachHang));
+
+        String lyDoHuy = lichSuKhoDAO.getLyDoHuyDon(idHD);
+
+        if (!lyDoHuy.equals("Không có lý do")) {
+            JLabel lblLyDo = new JLabel("<html><b>Lý do hủy:</b> <font color='red'>" + lyDoHuy + "</font></html>");
+            lblLyDo.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, 13));
+            pnlHeader.add(lblLyDo);
+            pnlHeader.add(new JLabel(""));
+        } else {
+            pnlHeader.add(new JLabel(""));
+            pnlHeader.add(new JLabel(""));
+        }
 
         add(pnlHeader, BorderLayout.NORTH);
 
-        // --- 2. BẢNG CHI TIẾT SÁCH (CENTER) ---
+
         String[] cols = {"Mã Sách", "Tên Sách", "Số Lượng", "Đơn Giá", "Thành Tiền"};
         modelChiTiet = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
@@ -76,7 +108,7 @@ public class ChiTietHoaDonDialog extends JDialog {
         scrollPane.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
         add(scrollPane, BorderLayout.CENTER);
 
-        // --- 3. TỔNG TIỀN & NÚT ĐÓNG (SOUTH) ---
+
         JPanel pnlBottom = new JPanel(new BorderLayout());
         pnlBottom.setOpaque(false);
         pnlBottom.setBorder(new EmptyBorder(15, 0, 0, 0));
@@ -140,7 +172,7 @@ public class ChiTietHoaDonDialog extends JDialog {
         DefaultTableCellRenderer center = new DefaultTableCellRenderer();
         center.setHorizontalAlignment(JLabel.CENTER);
 
-        // Căn giữa tất cả trừ cột Tên Sách
+
         for(int i=0; i<table.getColumnCount(); i++) {
             if(i != 1) table.getColumnModel().getColumn(i).setCellRenderer(center);
         }
@@ -148,21 +180,15 @@ public class ChiTietHoaDonDialog extends JDialog {
         table.getColumnModel().getColumn(1).setPreferredWidth(250);
     }
 
-    // ==========================================
-    // HÀM NẠP DỮ LIỆU TỪ DATABASE
-    // ==========================================
     private void loadChiTietHoaDon() {
         modelChiTiet.setRowCount(0);
-        double tongTienHD = 0; // Biến tính tổng tiền
+        double tongTienHD = 0;
 
         try {
-            // Lọc lấy số để truyền xuống BUS (VD: "HD001" -> 1)
             String soHD = maHD.replaceAll("[^0-9]", "");
             if (soHD.isEmpty()) return;
 
             int idHD = Integer.parseInt(soHD);
-
-            // Đã gọi hàm getChiTietByMaHD từ hoaDonBUS
             List<ChiTietHoaDonDTO> list = hoaDonBUS.getChiTietByMaHD(idHD);
 
             if (list != null) {
@@ -171,7 +197,7 @@ public class ChiTietHoaDonDialog extends JDialog {
 
                     modelChiTiet.addRow(new Object[]{
                             "S" + String.format("%03d", ct.getMaSach()),
-                            ct.getTenSach() != null ? ct.getTenSach() : "Không tìm thấy", // Hiển thị tên sách
+                            ct.getTenSach() != null ? ct.getTenSach() : "Không tìm thấy",
                             ct.getSoLuong(),
                             df.format(ct.getDonGia()),
                             df.format(ct.getThanhTien())

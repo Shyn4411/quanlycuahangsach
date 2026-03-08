@@ -3,17 +3,15 @@ package dto;
 public class NhanVienDTO {
     private int maNV;
     private int maTaiKhoan;
-    private String maNVCode;
     private String hoTen;
     private String soDienThoai;
 
     public NhanVienDTO() {
     }
 
-    public NhanVienDTO(int maNV, int maTaiKhoan, String maNVCode, String hoTen, String soDienThoai) {
+    public NhanVienDTO(int maNV, int maTaiKhoan, String hoTen, String soDienThoai) {
         this.maNV = maNV;
         this.maTaiKhoan = maTaiKhoan;
-        this.maNVCode = maNVCode;
         this.hoTen = hoTen;
         this.soDienThoai = soDienThoai;
     }
@@ -34,13 +32,6 @@ public class NhanVienDTO {
         this.maTaiKhoan = maTaiKhoan;
     }
 
-    public String getMaNVCode() {
-        return maNVCode;
-    }
-
-    public void setMaNVCode(String maNVCode) {
-        this.maNVCode = maNVCode;
-    }
 
     public String getHoTen() {
         return hoTen;
@@ -62,7 +53,6 @@ public class NhanVienDTO {
     public String toString() {
         return "NhanVienDTO{" +
                 "maNV=" + maNV +
-                ", maNVCode='" + maNVCode + '\'' +
                 ", hoTen='" + hoTen + '\'' +
                 ", soDienThoai='" + soDienThoai + '\'' +
                 '}';

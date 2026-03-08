@@ -93,6 +93,7 @@ public class MainFrame extends JFrame {
             sidebar.add(createMenuBtn("Khách hàng", false));
             sidebar.add(createMenuBtn("Bán hàng", false));
             sidebar.add(createMenuBtn("Đơn hàng", false));
+            sidebar.add(createMenuBtn("Đổi trả", false));
         }
 
         if (tkDangNhap.getMaQuyen() == 1 || tkDangNhap.getMaQuyen() == 3) {
@@ -149,6 +150,7 @@ public class MainFrame extends JFrame {
         }
 
         if (tkDangNhap.getMaQuyen() == 1) {
+            sidebar.add(createMenuBtn("Khuyến mãi", false));
             sidebar.add(createMenuBtn("Thống kê", false));
         }
 
@@ -205,6 +207,10 @@ public class MainFrame extends JFrame {
                 switchPanel(new BanHangGUI(tkDangNhap));
             } else if (text.contains("Đơn hàng")) {
                 switchPanel(new HoaDonGUI(tkDangNhap));
+            } else if (text.contains("Đổi trả")) {
+                switchPanel(new DoiTraGUI(tkDangNhap));
+            } else if (text.contains("Khuyến mãi")) {
+                switchPanel(new KhuyenMaiGUI());
             } else if (text.contains("Nhập hàng")) {
                 switchPanel(new PhieuNhapGUI(tkDangNhap));
             } else if (text.contains("Lịch sử kho")) {
@@ -219,8 +225,8 @@ public class MainFrame extends JFrame {
     // NÚT MENU CON (SUB-MENU)
     private JButton createSubMenuBtn(String text) {
         JButton btn = new JButton(text);
-        btn.setPreferredSize(new Dimension(Integer.MAX_VALUE, 45));
-        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
+        btn.setPreferredSize(new Dimension(Integer.MAX_VALUE, 35));
+        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         btn.setFont(new Font("Segoe UI", Font.PLAIN, 13)); // Chữ nhỏ hơn, không in đậm
         btn.setForeground(new Color(220, 220, 220)); // Chữ hơi xám nhẹ để phân biệt với nút mẹ
         btn.setOpaque(false);

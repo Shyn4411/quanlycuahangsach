@@ -162,4 +162,27 @@ public class KhachHangDAO {
         }
         return kh; // Trả về null nếu không tìm thấy ai
     }
+
+    public KhachHangDTO getKhachHangById(int maKH) {
+        String sql = "SELECT * FROM KhachHang WHERE MaKH = ?";
+
+        try (Connection conn = JDBCUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, maKH);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    KhachHangDTO kh = new KhachHangDTO();
+                    kh.setMaKH(rs.getInt("MaKH"));
+                    kh.setHoTen(rs.getString("HoTen"));
+                    kh.setSoDienThoai(rs.getString("SoDienThoai"));
+                    return kh;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

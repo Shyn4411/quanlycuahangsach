@@ -15,7 +15,8 @@ public class PhieuTraKhachHangDAO {
 
     public List<PhieuTraKhachHangDTO> getAll() {
         List<PhieuTraKhachHangDTO> list = new ArrayList<>();
-        String sql = "SELECT MaPTK, MaPTKCode, MaHD, MaNV, LyDo, TienHoan, NgayTao FROM PhieuTraKhachHang ORDER BY NgayTao DESC";
+        // Đã xóa MaPTKCode khỏi câu SELECT
+        String sql = "SELECT MaPTK, MaHD, MaNV, LyDo, TienHoan, NgayTao FROM PhieuTraKhachHang ORDER BY NgayTao DESC";
 
         try (Connection conn = JDBCUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -24,7 +25,6 @@ public class PhieuTraKhachHangDAO {
             while (rs.next()) {
                 PhieuTraKhachHangDTO dto = new PhieuTraKhachHangDTO();
                 dto.setMaPTK(rs.getInt("MaPTK"));
-                dto.setMaPTKCode(rs.getString("MaPTKCode"));
                 dto.setMaHD(rs.getInt("MaHD"));
                 dto.setMaNV(rs.getInt("MaNV"));
                 dto.setLyDo(rs.getString("LyDo"));
@@ -43,7 +43,8 @@ public class PhieuTraKhachHangDAO {
 
     public List<PhieuTraKhachHangDTO> getByMaHD(int maHD) {
         List<PhieuTraKhachHangDTO> list = new ArrayList<>();
-        String sql = "SELECT MaPTK, MaPTKCode, MaHD, MaNV, LyDo, TienHoan, NgayTao FROM PhieuTraKhachHang WHERE MaHD = ? ORDER BY NgayTao DESC";
+        // Đã xóa MaPTKCode khỏi câu SELECT
+        String sql = "SELECT MaPTK, MaHD, MaNV, LyDo, TienHoan, NgayTao FROM PhieuTraKhachHang WHERE MaHD = ? ORDER BY NgayTao DESC";
 
         try (Connection conn = JDBCUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -54,7 +55,6 @@ public class PhieuTraKhachHangDAO {
                 while (rs.next()) {
                     PhieuTraKhachHangDTO dto = new PhieuTraKhachHangDTO();
                     dto.setMaPTK(rs.getInt("MaPTK"));
-                    dto.setMaPTKCode(rs.getString("MaPTKCode"));
                     dto.setMaHD(rs.getInt("MaHD"));
                     dto.setMaNV(rs.getInt("MaNV"));
                     dto.setLyDo(rs.getString("LyDo"));
@@ -74,22 +74,22 @@ public class PhieuTraKhachHangDAO {
     }
 
     public int insert(PhieuTraKhachHangDTO dto) {
-        String sql = "INSERT INTO PhieuTraKhachHang (MaPTKCode, MaHD, MaNV, LyDo, TienHoan) VALUES (?, ?, ?, ?, ?)";
+        // Đã xóa MaPTKCode khỏi câu INSERT
+        String sql = "INSERT INTO PhieuTraKhachHang (MaHD, MaNV, LyDo, TienHoan) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = JDBCUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            ps.setString(1, dto.getMaPTKCode());
-            ps.setInt(2, dto.getMaHD());
-            ps.setInt(3, dto.getMaNV());
-            ps.setString(4, dto.getLyDo());
-            ps.setBigDecimal(5, dto.getTienHoan());
+            ps.setInt(1, dto.getMaHD());
+            ps.setInt(2, dto.getMaNV());
+            ps.setString(3, dto.getLyDo());
+            ps.setBigDecimal(4, dto.getTienHoan());
 
             int affectedRows = ps.executeUpdate();
             if (affectedRows > 0) {
                 try (ResultSet rs = ps.getGeneratedKeys()) {
                     if (rs.next()) {
-                        return rs.getInt(1);
+                        return rs.getInt(1); // Trả về mã phiếu trả vừa tạo
                     }
                 }
             }
