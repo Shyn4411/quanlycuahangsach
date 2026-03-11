@@ -11,6 +11,7 @@ public class ChiTietHoaDonDTO {
     private int soLuong;
     private BigDecimal donGia;
     private BigDecimal thanhTien;
+    private int soLuongDaTra;
 
     public ChiTietHoaDonDTO() {
     }
@@ -82,6 +83,8 @@ public class ChiTietHoaDonDTO {
         this.thanhTien = thanhTien;
     }
 
+    public int getSoLuongDaTra() { return soLuongDaTra; }
+    public void setSoLuongDaTra(int soLuongDaTra) { this.soLuongDaTra = soLuongDaTra; }
     @Override
     public String toString() {
         return "ChiTietHoaDonDTO{" +

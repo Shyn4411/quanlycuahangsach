@@ -7,10 +7,13 @@ import dao.SachDAO;
 import dto.ChiTietHoaDonDTO;
 import dto.HoaDonDTO;
 import dto.LichSuKhoDTO;
+import dto.ThanhToanDTO;
 import enums.LoaiGiaoDich;
 import enums.PhuongThucThanhToan;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 public class HoaDonBUS {
 
@@ -35,36 +38,41 @@ public class HoaDonBUS {
         int maHoaDonMoi = hoaDonDAO.insert(hoaDon);
 
         if (maHoaDonMoi > 0) {
+            try {
 
-            // --- 2. THÊM ĐOẠN LƯU GIAO DỊCH THANH TOÁN VÀO DB ---
-            dto.ThanhToanDTO tt = new dto.ThanhToanDTO();
-            tt.setMaHD(maHoaDonMoi);
-            tt.setPhuongThuc(pttt); // Lấy chữ 'TienMat' hoặc 'ChuyenKhoan' từ Enum
-            tt.setSoTien(hoaDon.getThanhTien());
-            tt.setGhiChuGiaoDich("Thanh toán tại quầy");
+                ThanhToanDTO tt = new ThanhToanDTO();
+                tt.setMaHD(maHoaDonMoi);
+                tt.setPhuongThuc(pttt);
+                tt.setSoTien(hoaDon.getThanhTien());
+                tt.setGhiChuGiaoDich("Thanh toán tại quầy");
 
-            thanhToanDAO.insert(tt);
-            // ---------------------------------------------------
+                thanhToanDAO.insert(tt);
 
-            // 3. CODE TRỪ KHO CỦA ÔNG (Giữ nguyên không sai một ly)
-            for (ChiTietHoaDonDTO chiTietHoaDon : danhSachCTHD) {
-                chiTietHoaDon.setMaHD(maHoaDonMoi);
-                chiTietHoaDonDAO.insert(chiTietHoaDon);
+                for (ChiTietHoaDonDTO chiTietHoaDon : danhSachCTHD) {
+                    chiTietHoaDon.setMaHD(maHoaDonMoi);
+                    chiTietHoaDonDAO.insert(chiTietHoaDon);
 
-                sachDAO.truTonKho(chiTietHoaDon.getMaSach(), chiTietHoaDon.getSoLuong());
+                    sachDAO.truTonKho(chiTietHoaDon.getMaSach(), chiTietHoaDon.getSoLuong());
 
-                LichSuKhoDTO lichSu = new LichSuKhoDTO();
-                lichSu.setMaSach(chiTietHoaDon.getMaSach());
-                lichSu.setLoaiGiaoDich(enums.LoaiGiaoDich.BAN_HANG);
-                lichSu.setLoaiChungTu(enums.LoaiChungTu.HOADON);
-                lichSu.setMaChungTu(maHoaDonMoi);
-                lichSu.setSoLuongThayDoi(-chiTietHoaDon.getSoLuong());
-                lichSu.setGhiChu("Bán hàng theo hóa đơn " + String.format("HD%03d", maHoaDonMoi));
+                    LichSuKhoDTO lichSu = new LichSuKhoDTO();
+                    lichSu.setMaSach(chiTietHoaDon.getMaSach());
+                    lichSu.setLoaiGiaoDich(enums.LoaiGiaoDich.BAN_HANG);
 
-                lichSuKhoDAO.insert(lichSu);
+                    lichSu.setLoaiChungTu(enums.LoaiChungTu.HOA_DON);
 
+                    lichSu.setMaChungTu(maHoaDonMoi);
+                    lichSu.setSoLuongThayDoi(-chiTietHoaDon.getSoLuong());
+                    lichSu.setGhiChu("Bán hàng theo hóa đơn " + String.format("HD%03d", maHoaDonMoi));
+
+                    lichSuKhoDAO.insert(lichSu);
+                }
+                return "Thành công: Đã tạo hóa đơn và xuất kho sách!";
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                hoaDonDAO.delete(maHoaDonMoi);
+                return "Lỗi: Quá trình xử lý chi tiết thất bại, đã hoàn tác hóa đơn!";
             }
-            return "Thành công: Đã tạo hóa đơn và xuất kho sách!";
         }
         return "Lỗi: Không thể tạo hóa đơn!";
     }
@@ -75,13 +83,13 @@ public class HoaDonBUS {
             List<ChiTietHoaDonDTO> dsChiTiet = chiTietHoaDonDAO.getByMaHD(maHoaDon);
 
             for (ChiTietHoaDonDTO ds : dsChiTiet) {
-
                 sachDAO.congTonKho(ds.getMaSach(), ds.getSoLuong());
 
                 LichSuKhoDTO lichSu = new LichSuKhoDTO();
                 lichSu.setMaSach(ds.getMaSach());
                 lichSu.setLoaiGiaoDich(LoaiGiaoDich.HUY_BAN_HANG);
-                lichSu.setLoaiChungTu(enums.LoaiChungTu.HOADON);
+                lichSu.setLoaiChungTu(enums.LoaiChungTu.HOA_DON);
+
                 lichSu.setMaChungTu(maHoaDon);
                 lichSu.setSoLuongThayDoi(ds.getSoLuong());
                 lichSu.setGhiChu("Hoàn kho do hủy đơn " + String.format("HD%03d", maHoaDon) + " - Lý do: " + lyDoHuy);
@@ -98,63 +106,41 @@ public class HoaDonBUS {
         return chiTietHoaDonDAO.getByMaHD(maHD);
     }
 
-    // ==========================================================
-    // LOGIC PHỤC VỤ DASHBOARD MAINFRAME
-    // ==========================================================
 
-    public double getDoanhThuHomNay() {
-        java.time.LocalDate today = java.time.LocalDate.now();
-        double doanhThu = 0;
-
-        List<HoaDonDTO> dsHoaDon = hoaDonDAO.getAll();
-        for (HoaDonDTO hd : dsHoaDon) {
-            // Check hóa đơn Hoàn Thành và lập trong ngày hôm nay
-            if (hd.getTrangThai() == enums.TrangThaiGiaoDich.HoanThanh
-                    && hd.getNgayTao() != null
-                    && hd.getNgayTao().toLocalDate().equals(today)) {
-
-                // Nếu ThanhTien null thì tự tính từ TongTien - TienGiam
-                if(hd.getThanhTien() != null) {
-                    doanhThu += hd.getThanhTien().doubleValue();
-                } else {
-                    double tong = hd.getTongTien() != null ? hd.getTongTien().doubleValue() : 0;
-                    double giam = hd.getTienGiam() != null ? hd.getTienGiam().doubleValue() : 0;
-                    doanhThu += (tong - giam);
-                }
-            }
-        }
-        return doanhThu;
+    public BigDecimal getDoanhThuHomNay() {
+        return hoaDonDAO.getDoanhThuHomNay();
     }
 
-    public int getSoDonHomNay() {
-        java.time.LocalDate today = java.time.LocalDate.now();
-        int soDon = 0;
-
-        List<HoaDonDTO> dsHoaDon = hoaDonDAO.getAll();
-        for (HoaDonDTO hd : dsHoaDon) {
-            if (hd.getNgayTao() != null && hd.getNgayTao().toLocalDate().equals(today)) {
-                soDon++;
-            }
-        }
-        return soDon;
+    public int getSoDonHangMoi() {
+        return hoaDonDAO.getSoDonHangMoi();
     }
 
-    public List<HoaDonDTO> getRecentOrders(int limit) {
-        List<HoaDonDTO> dsHoaDon = hoaDonDAO.getAll();
+    public BigDecimal getLoiNhuanHomNay() {
+        return hoaDonDAO.getLoiNhuanHomNay();
+    }
 
-        // Sắp xếp ID giảm dần (đơn mới lên đầu)
-        dsHoaDon.sort((hd1, hd2) -> Integer.compare(hd2.getMaHD(), hd1.getMaHD()));
-
-        // Trả về số lượng dòng giới hạn
-        if (dsHoaDon.size() > limit) {
-            return dsHoaDon.subList(0, limit);
-        }
-        return dsHoaDon;
+    public double[] getDoanhThuTheoTuanTrongThang() {
+        return hoaDonDAO.getDoanhThuTheoTuanTrongThang();
     }
 
     public dto.HoaDonDTO getHoaDonById(int maHD) {
         if (maHD <= 0) return null;
         return hoaDonDAO.getById(maHD);
+    }
+
+
+    public String taoDonHangOnline(int maKhachHang, Map<Integer, Integer> gioHang, BigDecimal tongTien) {
+        if (gioHang == null || gioHang.isEmpty()) {
+            return "Lỗi: Giỏ hàng trống!";
+        }
+
+        boolean isSuccess = hoaDonDAO.insertDonHangOnline(maKhachHang, gioHang, tongTien);
+
+        if (isSuccess) {
+            return "Thành công: Đơn hàng đã được ghi nhận!";
+        } else {
+            return "Lỗi: Không thể lưu đơn hàng vào hệ thống lúc này.";
+        }
     }
 
 }

@@ -1,5 +1,5 @@
 package enums;
 
 public enum TrangThaiSach {
-    DangBan, NgungBan
+    DANG_BAN, NGUNG_BAN
 }

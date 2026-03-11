@@ -1,449 +1,283 @@
 package gui;
 
-import javax.swing.*;
+import bus.ThongKeBUS;
+import dto.TaiKhoanDTO;
 import java.awt.*;
+import java.text.DecimalFormat;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
-import java.awt.Color;
-import java.awt.Font;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.text.SimpleDateFormat;
-import java.time.YearMonth;
-import java.util.Date;
-import java.util.List;
-
-// Import thư viện JCalendar
-import com.toedter.calendar.JDateChooser;
-import com.toedter.calendar.JYearChooser;
-
-// Import thư viện Apache POI để xuất Excel
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-
-// IMPORT THƯ VIỆN JFREECHART VẼ BIỂU ĐỒ
-import org.jfree.chart.ChartFactory;
-import org.jfree.chart.ChartPanel;
-import org.jfree.chart.JFreeChart;
-import org.jfree.chart.plot.CategoryPlot;
-import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.chart.renderer.category.BarRenderer;
-import org.jfree.data.category.DefaultCategoryDataset;
 
 public class ThongKeGUI extends JPanel {
 
-    private bus.ThongKeBUS tkBUS = new bus.ThongKeBUS();
-    private java.text.DecimalFormat df = new java.text.DecimalFormat("#,### VNĐ");
+    private final Color COLOR_CREAM = new Color(248, 244, 236);
+    private final Color COLOR_PRIMARY = new Color(232, 60, 145); // Hồng
+    private final Color COLOR_DARK = new Color(67, 51, 76);    // Tím xám Sidebar
+    private final Color COLOR_PROFIT = new Color(46, 204, 113); // Xanh lá
 
-    private JTable tblThongKe;
-    private DefaultTableModel modelThongKe;
-    private JPanel pnlTable, pnlChart; // Thêm pnlChart
-    private JTabbedPane tabCenter;     // Tab để chuyển qua lại giữa Bảng và Biểu Đồ
+    private JTextField txtTuNgay, txtDenNgay;
+    private JLabel lblRevenue, lblProfit, lblCost;
+    private JTabbedPane mainTabbedPane;
 
-    // Các thành phần bộ lọc
-    private JComboBox<String> cbxLoaiThongKe;
-    private JLabel lblTu, lblDen, lblNam;
-    private JDateChooser txtTuNgay, txtDenNgay;
-    private JYearChooser txtNam;
+    private JTable tblRevenue, tblProfit, tblInventory;
+    private DefaultTableModel modelRevenue, modelProfit, modelInventory;
 
-    private JLabel lblTongVon, lblTongDoanhThu, lblLoiNhuan;
-    private JButton btnThongKe, btnXuatExcel;
+    private CustomChartPanel chartRevenue, chartProfit;
 
-    final Color COL_SIDEBAR = new Color(67, 51, 76);
-    final Color COL_PRIMARY = new Color(232, 60, 145);
-    final Color COL_BG = new Color(248, 244, 236);
+    private ThongKeBUS tkBus = new ThongKeBUS();
+    private List<Object[]> currentData = new ArrayList<>();
+    private DecimalFormat formatter = new DecimalFormat("###,###,### VNĐ");
 
-    public ThongKeGUI() {
-        initUI();
-        initEvents();
-        updateFilterUI();
-        thucHienThongKe();
-    }
-
-    private void initUI() {
+    public ThongKeGUI(TaiKhoanDTO user) {
         setLayout(new BorderLayout(15, 15));
-        setBackground(COL_BG);
-        setBorder(new EmptyBorder(20, 20, 20, 20));
+        setBackground(COLOR_CREAM);
+        setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        // --- 1. THANH BỘ LỌC (NORTH) ---
-        JPanel pnlFilter = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
-        pnlFilter.setBackground(Color.WHITE);
-        pnlFilter.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+        initHeader();
+        initMainTabs();
 
-        pnlFilter.add(new JLabel("Loại báo cáo:"));
-        cbxLoaiThongKe = new JComboBox<>(new String[]{
-                "Top 10 Sách Bán Chạy",
-                "Doanh Thu Theo Tháng",
-                "Sách Sắp Hết Hàng (Tồn < 10)"
-        });
-        cbxLoaiThongKe.setPreferredSize(new Dimension(220, 32));
-        cbxLoaiThongKe.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        pnlFilter.add(cbxLoaiThongKe);
-
-        lblTu = new JLabel(" | Từ ngày:");
-        txtTuNgay = new JDateChooser();
-        txtTuNgay.setDateFormatString("dd/MM/yyyy");
-        txtTuNgay.setPreferredSize(new Dimension(130, 32));
-        txtTuNgay.setDate(new Date());
-
-        lblDen = new JLabel("Đến:");
-        txtDenNgay = new JDateChooser();
-        txtDenNgay.setDateFormatString("dd/MM/yyyy");
-        txtDenNgay.setPreferredSize(new Dimension(130, 32));
-        txtDenNgay.setDate(new Date());
-
-        lblNam = new JLabel(" | Chọn Năm:");
-        txtNam = new JYearChooser();
-        txtNam.setPreferredSize(new Dimension(80, 32));
-
-        pnlFilter.add(lblTu); pnlFilter.add(txtTuNgay);
-        pnlFilter.add(lblDen); pnlFilter.add(txtDenNgay);
-        pnlFilter.add(lblNam); pnlFilter.add(txtNam);
-
-        btnThongKe = new JButton("Lọc Dữ Liệu");
-        styleButton(btnThongKe, COL_SIDEBAR);
-        pnlFilter.add(btnThongKe);
-
-        btnXuatExcel = new JButton("Xuất Excel");
-        styleButton(btnXuatExcel, new Color(46, 204, 113));
-        pnlFilter.add(btnXuatExcel);
-
-        add(pnlFilter, BorderLayout.NORTH);
-
-        // --- 2. TRUNG TÂM (CENTER) ---
-        JPanel pnlCenter = new JPanel(new BorderLayout(0, 20));
-        pnlCenter.setOpaque(false);
-
-        JPanel pnlCards = new JPanel(new GridLayout(1, 3, 20, 0));
-        pnlCards.setOpaque(false);
-        pnlCards.setPreferredSize(new Dimension(0, 100));
-
-        lblTongVon = createStatCard(pnlCards, "TỔNG VỐN NHẬP KHO", "0 VNĐ", Color.GRAY);
-        lblTongDoanhThu = createStatCard(pnlCards, "TỔNG DOANH THU BÁN", "0 VNĐ", COL_PRIMARY);
-        lblLoiNhuan = createStatCard(pnlCards, "LỢI NHUẬN RÒNG", "0 VNĐ", new Color(41, 128, 185));
-
-        pnlCenter.add(pnlCards, BorderLayout.NORTH);
-
-        // --- TẠO TAB CHỨA BẢNG VÀ BIỂU ĐỒ ---
-        tabCenter = new JTabbedPane();
-        tabCenter.setFont(new Font("Segoe UI", Font.BOLD, 14));
-
-        // Tab 1: Bảng
-        pnlTable = new JPanel(new BorderLayout());
-        pnlTable.setBackground(Color.WHITE);
-        modelThongKe = new DefaultTableModel(new String[]{"Cột 1", "Cột 2"}, 0) {
-            @Override public boolean isCellEditable(int row, int column) { return false; }
-        };
-        tblThongKe = new JTable(modelThongKe);
-        pnlTable.add(new JScrollPane(tblThongKe), BorderLayout.CENTER);
-
-        // Tab 2: Biểu Đồ
-        pnlChart = new JPanel(new BorderLayout());
-        pnlChart.setBackground(Color.WHITE);
-
-        tabCenter.addTab("BẢNG DỮ LIỆU", pnlTable);
-        tabCenter.addTab("BIỂU ĐỒ TRỰC QUAN", pnlChart);
-
-        pnlCenter.add(tabCenter, BorderLayout.CENTER);
-        add(pnlCenter, BorderLayout.CENTER);
+        // Mặc định lọc từ đầu năm
+        txtTuNgay.setText(LocalDate.now().withDayOfYear(1).toString());
+        txtDenNgay.setText(LocalDate.now().toString());
+        refreshAllData();
     }
 
-    private void setupTableColumns(String[] cols, int loaiBaoCao) {
-        modelThongKe.setColumnIdentifiers(cols);
-        tblThongKe.setFocusable(false);
-        tblThongKe.setIntercellSpacing(new Dimension(0, 0));
-        tblThongKe.setRowHeight(40);
-        tblThongKe.setSelectionBackground(new Color(232, 240, 255));
-        tblThongKe.setSelectionForeground(Color.BLACK);
-        tblThongKe.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+    private void initHeader() {
+        JPanel pnlHeader = new JPanel(new BorderLayout());
+        pnlHeader.setOpaque(false);
 
-        JTableHeader header = tblThongKe.getTableHeader();
-        header.setBackground(new Color(245, 245, 250));
-        header.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        header.setOpaque(false);
-        header.setForeground(Color.BLACK);
-        header.setPreferredSize(new Dimension(0, 40));
-        ((DefaultTableCellRenderer) header.getDefaultRenderer()).setHorizontalAlignment(JLabel.CENTER);
+        JLabel lblTitle = new JLabel("BÁO CÁO CỬA HÀNG", SwingConstants.LEFT);
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        lblTitle.setForeground(COLOR_DARK);
 
-        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+        JPanel pnlFilter = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        pnlFilter.setOpaque(false);
+        txtTuNgay = new JTextField(8);
+        txtDenNgay = new JTextField(8);
+        JButton btnLoc = new JButton("Cập Nhật Số Liệu");
+        styleButton(btnLoc);
 
-        if (loaiBaoCao == 0) {
-            tblThongKe.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
-            tblThongKe.getColumnModel().getColumn(1).setCellRenderer(centerRenderer);
-            tblThongKe.getColumnModel().getColumn(3).setCellRenderer(centerRenderer);
+        pnlFilter.add(new JLabel("Từ:")); pnlFilter.add(txtTuNgay);
+        pnlFilter.add(new JLabel("Đến:")); pnlFilter.add(txtDenNgay);
+        pnlFilter.add(btnLoc);
 
-            tblThongKe.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
-                @Override
-                public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                    Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                    setHorizontalAlignment(JLabel.CENTER);
-                    if (value != null) {
-                        c.setForeground(new Color(46, 204, 113));
-                        setFont(getFont().deriveFont(Font.BOLD));
-                    }
-                    if (isSelected) c.setForeground(table.getSelectionForeground());
-                    return c;
-                }
-            });
-            tblThongKe.getColumnModel().getColumn(2).setPreferredWidth(250);
+        pnlHeader.add(lblTitle, BorderLayout.WEST);
+        pnlHeader.add(pnlFilter, BorderLayout.EAST);
+        add(pnlHeader, BorderLayout.NORTH);
 
-        } else if (loaiBaoCao == 1) {
-            tblThongKe.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
-            tblThongKe.getColumnModel().getColumn(1).setCellRenderer(centerRenderer);
-            tblThongKe.getColumnModel().getColumn(2).setCellRenderer(centerRenderer);
+        btnLoc.addActionListener(e -> refreshAllData());
+    }
 
-            tblThongKe.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
-                @Override
-                public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                    Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                    setHorizontalAlignment(JLabel.CENTER);
-                    if (value != null) {
-                        c.setForeground(new Color(41, 128, 185));
-                        setFont(getFont().deriveFont(Font.BOLD));
-                    }
-                    if (isSelected) c.setForeground(table.getSelectionForeground());
-                    return c;
-                }
-            });
+    private void initMainTabs() {
+        mainTabbedPane = new JTabbedPane();
+        mainTabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
 
-        } else if (loaiBaoCao == 2) {
-            tblThongKe.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
-            tblThongKe.getColumnModel().getColumn(2).setCellRenderer(centerRenderer);
-            tblThongKe.getColumnModel().getColumn(3).setCellRenderer(centerRenderer);
+        // TAB 1: DOANH THU
+        mainTabbedPane.addTab("DOANH THU", createRevenuePanel());
 
-            tblThongKe.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
-                @Override
-                public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                    Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                    setHorizontalAlignment(JLabel.CENTER);
-                    if (value != null) {
-                        c.setForeground(new Color(231, 76, 60));
-                        setFont(getFont().deriveFont(Font.BOLD));
-                    }
-                    if (isSelected) c.setForeground(table.getSelectionForeground());
-                    return c;
-                }
-            });
-            tblThongKe.getColumnModel().getColumn(1).setPreferredWidth(250);
+        // TAB 2: LỢI NHUẬN
+        mainTabbedPane.addTab("LỢI NHUẬN", createProfitPanel());
+
+        // TAB 3: TỒN KHO
+        mainTabbedPane.addTab("TỒN KHO", createInventoryPanel());
+
+        add(mainTabbedPane, BorderLayout.CENTER);
+    }
+
+    // --- HÀM SET TAB CHO SIDEBAR GỌI ---
+    public void setSelectedTab(int index) {
+        if (index >= 0 && index < mainTabbedPane.getTabCount()) {
+            mainTabbedPane.setSelectedIndex(index);
         }
     }
 
-    private JLabel createStatCard(JPanel parent, String title, String value, Color color) {
-        JPanel card = new JPanel(new GridLayout(2, 1));
-        card.setBackground(Color.WHITE);
-        card.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+    private JPanel createRevenuePanel() {
+        JPanel pnl = new JPanel(new BorderLayout(0, 15));
+        pnl.setBackground(COLOR_CREAM);
 
-        JLabel lblT = new JLabel(title, SwingConstants.CENTER);
-        lblT.setForeground(Color.GRAY);
-        lblT.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        pnl.add(createCard("TỔNG DOANH THU BÁN HÀNG", lblRevenue = new JLabel("0"), COLOR_PRIMARY), BorderLayout.NORTH);
 
-        JLabel lblV = new JLabel(value, SwingConstants.CENTER);
-        lblV.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        lblV.setForeground(color);
+        chartRevenue = new CustomChartPanel(true);
+        pnl.add(chartRevenue, BorderLayout.CENTER);
 
-        card.add(lblT);
-        card.add(lblV);
-        parent.add(card);
-        return lblV;
+        modelRevenue = new DefaultTableModel(new String[]{"Tháng", "Doanh Thu"}, 0);
+        tblRevenue = new JTable(modelRevenue);
+        setupTable(tblRevenue);
+        pnl.add(new JScrollPane(tblRevenue), BorderLayout.SOUTH);
+        tblRevenue.getParent().getParent().setPreferredSize(new Dimension(0, 150));
+
+        return pnl;
     }
 
-    private void styleButton(JButton btn, Color bg) {
-        btn.setBackground(bg);
-        btn.setForeground(Color.WHITE);
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setOpaque(true);
+    private JPanel createProfitPanel() {
+        JPanel pnl = new JPanel(new BorderLayout(0, 15));
+        pnl.setBackground(COLOR_CREAM);
+
+        JPanel pnlCards = new JPanel(new GridLayout(1, 2, 15, 0));
+        pnlCards.setOpaque(false);
+        pnlCards.add(createCard("LỢI NHUẬN THUẦN", lblProfit = new JLabel("0"), COLOR_PROFIT));
+        pnlCards.add(createCard("TỔNG VỐN ĐẦU TƯ", lblCost = new JLabel("0"), COLOR_DARK));
+        pnl.add(pnlCards, BorderLayout.NORTH);
+
+        chartProfit = new CustomChartPanel(false); // false = vẽ so sánh
+        pnl.add(chartProfit, BorderLayout.CENTER);
+
+        modelProfit = new DefaultTableModel(new String[]{"Tháng", "Vốn Nhập", "Lợi Nhuận"}, 0);
+        tblProfit = new JTable(modelProfit);
+        setupTable(tblProfit);
+        pnl.add(new JScrollPane(tblProfit), BorderLayout.SOUTH);
+        tblProfit.getParent().getParent().setPreferredSize(new Dimension(0, 150));
+
+        return pnl;
+    }
+
+    private JPanel createInventoryPanel() {
+        JPanel pnl = new JPanel(new BorderLayout(0, 15));
+        pnl.setBackground(COLOR_CREAM);
+
+        JLabel lblWarn = new JLabel("DANH SÁCH SẢN PHẨM CẦN NHẬP THÊM (TỒN < 10)", SwingConstants.CENTER);
+        lblWarn.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        lblWarn.setForeground(Color.RED);
+        pnl.add(lblWarn, BorderLayout.NORTH);
+
+        modelInventory = new DefaultTableModel(new String[]{"Mã Sách", "Tên Sách", "Loại", "NXB", "Tồn Kho"}, 0);
+        tblInventory = new JTable(modelInventory);
+        setupTable(tblInventory);
+        pnl.add(new JScrollPane(tblInventory), BorderLayout.CENTER);
+
+        return pnl;
+    }
+
+    private void refreshAllData() {
+        String tu = txtTuNgay.getText().trim();
+        String den = txtDenNgay.getText().trim();
+
+        // Cập nhật card
+        lblRevenue.setText(formatter.format(tkBus.getTongDoanhThu(tu, den)));
+        lblProfit.setText(formatter.format(tkBus.getLoiNhuan(tu, den)));
+        lblCost.setText(formatter.format(tkBus.getTongVon(tu, den)));
+
+        // Cập nhật dữ liệu tháng
+        currentData = tkBus.getDoanhThuTheoThang(tu, den);
+
+        modelRevenue.setRowCount(0);
+        modelProfit.setRowCount(0);
+        for (Object[] row : currentData) {
+            modelRevenue.addRow(new Object[]{row[0], formatter.format(row[2])});
+            modelProfit.addRow(new Object[]{row[0], formatter.format(row[1]), formatter.format(row[3])});
+        }
+
+        // Cập nhật tồn kho
+        List<Object[]> inv = tkBus.getSachSapHet();
+        modelInventory.setRowCount(0);
+        for (Object[] row : inv) modelInventory.addRow(row);
+
+        repaint();
+    }
+
+    // --- CÁC HÀM TIỆN ÍCH UI ---
+    private JPanel createCard(String title, JLabel lblValue, Color accentColor) {
+        JPanel pnl = new JPanel(new BorderLayout());
+        pnl.setBackground(Color.WHITE);
+        pnl.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(accentColor, 2), new EmptyBorder(10, 10, 10, 10)));
+        JLabel t = new JLabel(title, SwingConstants.CENTER);
+        t.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        t.setForeground(Color.GRAY);
+        lblValue.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        lblValue.setForeground(accentColor);
+        pnl.add(t, BorderLayout.NORTH); pnl.add(lblValue, BorderLayout.CENTER);
+        return pnl;
+    }
+
+    private void setupTable(JTable table) {
+        table.setRowHeight(35);
+        table.setSelectionBackground(new Color(255, 143, 183));
+        JTableHeader h = table.getTableHeader();
+        h.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        h.setPreferredSize(new Dimension(0, 35));
+    }
+
+    private void styleButton(JButton btn) {
+        btn.setBackground(COLOR_PRIMARY); btn.setForeground(Color.WHITE);
         btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.setPreferredSize(new Dimension(110, 32));
+        btn.setFocusPainted(false); btn.setBorderPainted(false);
     }
 
-    private void updateFilterUI() {
-        int index = cbxLoaiThongKe.getSelectedIndex();
-        if (index == 0) {
-            lblTu.setVisible(true); txtTuNgay.setVisible(true);
-            lblDen.setVisible(true); txtDenNgay.setVisible(true);
-            lblNam.setVisible(false); txtNam.setVisible(false);
-        } else if (index == 1) {
-            lblTu.setVisible(false); txtTuNgay.setVisible(false);
-            lblDen.setVisible(false); txtDenNgay.setVisible(false);
-            lblNam.setVisible(true); txtNam.setVisible(true);
-        } else if (index == 2) {
-            lblTu.setVisible(false); txtTuNgay.setVisible(false);
-            lblDen.setVisible(false); txtDenNgay.setVisible(false);
-            lblNam.setVisible(false); txtNam.setVisible(false);
-        }
+    private String formatShort(double a) {
+        if (a >= 1e6) return String.format("%.1f tr", a / 1e6).replace(".0", "");
+        if (a >= 1e3) return String.format("%.0f k", a / 1e3);
+        return String.format("%.0f", a);
     }
 
-    private void initEvents() {
-        cbxLoaiThongKe.addActionListener(e -> {
-            updateFilterUI();
-            thucHienThongKe();
-        });
-        btnThongKe.addActionListener(e -> thucHienThongKe());
-        btnXuatExcel.addActionListener(e -> xuatExcel());
-    }
+    // --- LỚP VẼ BIỂU ĐỒ 2D ---
+    // --- LỚP VẼ BIỂU ĐỒ 2D ĐÃ ĐƯỢC FIX TỶ LỆ ---
+    class CustomChartPanel extends JPanel {
+        private boolean isRevenueOnly;
+        public CustomChartPanel(boolean type) { this.isRevenueOnly = type; setBackground(Color.WHITE); }
 
-    // ==========================================
-    // LOGIC ĐỔ DỮ LIỆU & VẼ BIỂU ĐỒ
-    // ==========================================
-    private void thucHienThongKe() {
-        int index = cbxLoaiThongKe.getSelectedIndex();
-        modelThongKe.setRowCount(0);
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            if (currentData == null || currentData.isEmpty()) {
+                g.drawString("Không có dữ liệu trong khoảng thời gian này.", 20, 30);
+                return;
+            }
+            Graphics2D g2 = (Graphics2D) g;
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        SimpleDateFormat sdfDB = new SimpleDateFormat("yyyy-MM-dd");
-        String tuNgayDB = "", denNgayDB = "";
+            int w = getWidth(), h = getHeight();
+            int pL = 80, pR = 30, pB = 40, pT = 30; // Tăng margin trái (pL) để chứa vừa số tiền lớn
 
-        if (index == 0 && txtTuNgay.getDate() != null && txtDenNgay.getDate() != null) {
-            tuNgayDB = sdfDB.format(txtTuNgay.getDate()) + " 00:00:00";
-            denNgayDB = sdfDB.format(txtDenNgay.getDate()) + " 23:59:59";
-        } else if (index == 1) {
-            int year = txtNam.getYear();
-            tuNgayDB = year + "-01-01 00:00:00";
-            denNgayDB = year + "-12-31 23:59:59";
-        }
+            // Tìm giá trị cao nhất để làm đỉnh biểu đồ
+            double max = 1; // Khởi tạo bằng 1 để tránh lỗi chia cho 0
+            for (Object[] r : currentData) {
+                double dt = (double) r[2]; // Cột Doanh Thu
+                double ln = (double) r[3]; // Cột Lợi Nhuận
+                if (dt > max) max = dt;
+                if (!isRevenueOnly && ln > max) max = ln;
+            }
+            max *= 1.2; // Tăng thêm 20% khoảng không ở trên đỉnh
 
-        double doanhThu = tkBUS.getTongDoanhThu(tuNgayDB, denNgayDB);
-        double von = tkBUS.getTongVon(tuNgayDB, denNgayDB);
-        double loiNhuan = doanhThu - von;
+            // Vẽ lưới Y
+            g2.setColor(new Color(230, 230, 230));
+            for (int i = 0; i <= 4; i++) {
+                int y = h - pB - (int)((h - pB - pT) * i / 4.0);
+                g2.drawLine(pL, y, w - pR, y);
+                g2.setColor(Color.GRAY);
+                g2.drawString(formatShort((max / 4) * i), 10, y + 5);
+                g2.setColor(new Color(230, 230, 230));
+            }
 
-        lblTongDoanhThu.setText(df.format(doanhThu));
-        lblTongVon.setText(df.format(von));
-        lblLoiNhuan.setText(df.format(loiNhuan));
+            int groupW = (w - pL - pR) / currentData.size();
+            int barW = Math.min(40, groupW / 3);
 
-        // Khởi tạo tập dữ liệu cho Biểu Đồ
-        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+            for (int i = 0; i < currentData.size(); i++) {
+                Object[] d = currentData.get(i);
+                int x = pL + (i * groupW) + (groupW / 4);
 
-        if (index == 0) {
-            setupTableColumns(new String[]{"Hạng", "Mã Sách", "Tên Sách", "Số Lượng Đã Bán", "Doanh Thu Mang Lại"}, 0);
-            List<Object[]> list = tkBUS.getTopSachBanChay(tuNgayDB, denNgayDB);
-            if(list != null) {
-                for (Object[] row : list) {
-                    // Nạp dữ liệu vào biểu đồ (Lấy số lượng bán)
-                    dataset.addValue(((Number)row[3]).doubleValue(), "Số lượng bán", row[2].toString());
+                // Cột Doanh Thu
+                int hR = (int)(((double)d[2] / max) * (h - pB - pT));
+                // Nếu doanh thu âm thì set chiều cao bằng 0 để không bị lỗi vẽ ngược
+                if (hR < 0) hR = 0;
+                g2.setPaint(new GradientPaint(x, h-pB-hR, COLOR_PRIMARY, x, h-pB, COLOR_DARK));
+                g2.fillRoundRect(x, h - pB - hR, barW, hR, 5, 5);
 
-                    // Format tiền cho bảng
-                    row[4] = df.format(row[4]);
-                    modelThongKe.addRow(row);
+                if (!isRevenueOnly) {
+                    // Cột Lợi Nhuận
+                    int hP = (int)(((double)d[3] / max) * (h - pB - pT));
+                    if (hP < 0) hP = 0; // Tránh lỗi lỗ vốn vẽ ngược
+                    g2.setPaint(new GradientPaint(x + barW + 5, h-pB-hP, COLOR_PROFIT, x + barW + 5, h-pB, COLOR_DARK));
+                    g2.fillRoundRect(x + barW + 5, h - pB - hP, barW, hP, 5, 5);
                 }
+
+                g2.setColor(COLOR_DARK);
+                g2.drawString(d[0].toString(), x, h - 15);
             }
-            veBieuDo(dataset, "Top 10 Sách Bán Chạy", "Tên Sách", "Số lượng (Cuốn)");
-
-        } else if (index == 1) {
-            setupTableColumns(new String[]{"Tháng/Năm", "Tổng Vốn Nhập", "Tổng Doanh Thu Bán", "Lợi Nhuận Ròng"}, 1);
-            List<Object[]> list = tkBUS.getDoanhThuTheoThang(tuNgayDB, denNgayDB);
-            if(list != null) {
-                for (Object[] row : list) {
-                    // Nạp 2 cột vào biểu đồ để so sánh
-                    dataset.addValue(((Number)row[2]).doubleValue(), "Doanh Thu", row[0].toString());
-                    dataset.addValue(((Number)row[3]).doubleValue(), "Lợi Nhuận", row[0].toString());
-
-                    row[1] = df.format(row[1]);
-                    row[2] = df.format(row[2]);
-                    row[3] = df.format(row[3]);
-                    modelThongKe.addRow(row);
-                }
-            }
-            veBieuDo(dataset, "Biểu đồ Doanh Thu & Lợi Nhuận Năm " + txtNam.getYear(), "Tháng", "Số tiền (VNĐ)");
-
-        } else if (index == 2) {
-            setupTableColumns(new String[]{"Mã Sách", "Tên Sách", "Thể Loại", "Nhà Xuất Bản", "Tồn Kho Hiện Tại"}, 2);
-            List<Object[]> list = tkBUS.getSachSapHet();
-            if(list != null) {
-                for (Object[] row : list) {
-                    // Nạp dữ liệu tồn kho vào biểu đồ
-                    dataset.addValue(((Number)row[4]).doubleValue(), "Tồn Kho", row[1].toString());
-                    modelThongKe.addRow(row);
-                }
-            }
-            veBieuDo(dataset, "Sách Sắp Hết Hàng", "Tên Sách", "Số lượng tồn");
-        }
-    }
-
-    // ==========================================
-    // HÀM VẼ BIỂU ĐỒ BẰNG JFREECHART
-    // ==========================================
-    private void veBieuDo(DefaultCategoryDataset dataset, String title, String categoryLabel, String valueLabel) {
-        pnlChart.removeAll(); // Xóa biểu đồ cũ
-
-        // Tạo biểu đồ cột
-        JFreeChart chart = ChartFactory.createBarChart(
-                title,
-                categoryLabel,
-                valueLabel,
-                dataset,
-                PlotOrientation.VERTICAL,
-                true, true, false);
-
-        // Fix lỗi Font Tiếng Việt cho thư viện JFreeChart
-        chart.getTitle().setFont(new Font("Segoe UI", Font.BOLD, 18));
-        chart.getLegend().setItemFont(new Font("Segoe UI", Font.PLAIN, 13));
-
-        CategoryPlot plot = chart.getCategoryPlot();
-        plot.setBackgroundPaint(Color.WHITE);
-        plot.setRangeGridlinePaint(Color.LIGHT_GRAY);
-        plot.getDomainAxis().setLabelFont(new Font("Segoe UI", Font.BOLD, 14));
-        plot.getDomainAxis().setTickLabelFont(new Font("Segoe UI", Font.PLAIN, 11));
-        plot.getRangeAxis().setLabelFont(new Font("Segoe UI", Font.BOLD, 14));
-        plot.getRangeAxis().setTickLabelFont(new Font("Segoe UI", Font.PLAIN, 12));
-
-        // Tút lại màu sắc cho cột
-        BarRenderer renderer = (BarRenderer) plot.getRenderer();
-        renderer.setSeriesPaint(0, new Color(41, 128, 185)); // Xanh dương
-        if (dataset.getRowCount() > 1) {
-            renderer.setSeriesPaint(1, new Color(46, 204, 113)); // Xanh lá cây cho cột thứ 2 (Lợi Nhuận)
-        }
-
-        // Nhét vào Panel
-        ChartPanel chartPanel = new ChartPanel(chart);
-        chartPanel.setPreferredSize(new Dimension(pnlChart.getWidth(), pnlChart.getHeight()));
-        pnlChart.setLayout(new BorderLayout());
-        pnlChart.add(chartPanel, BorderLayout.CENTER);
-        pnlChart.validate();
-        pnlChart.repaint();
-    }
-
-    private void xuatExcel() {
-        if (tblThongKe.getRowCount() == 0) {
-            JOptionPane.showMessageDialog(this, "Không có dữ liệu để xuất!");
-            return;
-        }
-
-        try {
-            Workbook workbook = new XSSFWorkbook();
-            Sheet sheet = workbook.createSheet("ThongKe");
-
-            Row rowHeader = sheet.createRow(0);
-            for (int i = 0; i < tblThongKe.getColumnCount(); i++) {
-                Cell cell = rowHeader.createCell(i);
-                cell.setCellValue(tblThongKe.getColumnName(i));
-            }
-
-            for (int i = 0; i < tblThongKe.getRowCount(); i++) {
-                Row row = sheet.createRow(i + 1);
-                for (int j = 0; j < tblThongKe.getColumnCount(); j++) {
-                    Cell cell = row.createCell(j);
-                    if (tblThongKe.getValueAt(i, j) != null) {
-                        cell.setCellValue(tblThongKe.getValueAt(i, j).toString());
-                    }
-                }
-            }
-
-            String fileName = "BaoCaoThongKe_" + System.currentTimeMillis() + ".xlsx";
-            FileOutputStream out = new FileOutputStream(new File(fileName));
-            workbook.write(out);
-            out.close();
-            workbook.close();
-
-            JOptionPane.showMessageDialog(this, "Xuất Excel thành công!\nFile được lưu tại: " + fileName);
-            Desktop.getDesktop().open(new File(fileName));
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Lỗi khi xuất Excel: " + ex.getMessage());
         }
     }
 }

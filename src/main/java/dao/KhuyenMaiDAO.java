@@ -98,7 +98,7 @@ public class KhuyenMaiDAO {
         try (Connection conn = JDBCUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setString(1, TrangThaiKhuyenMai.HetHan.name());
+            ps.setString(1, TrangThaiKhuyenMai.HET_HAN.name());
             ps.setInt(2, maKM);
 
             return ps.executeUpdate() > 0;

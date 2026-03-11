@@ -1,17 +1,34 @@
 package enums;
 
 public enum Role {
-    ADMIN("Quản trị viên"),
-    NHANVIEN_BANHANG("Nhân viên bán hàng"),
-    NHANVIEN_KHO("Nhân viên kho");
+    ADMIN(1, "Quản trị viên"),
+    NHANVIEN_BANHANG(2, "Nhân viên bán hàng"),
+    NHANVIEN_KHO(3, "Nhân viên kho"),
+    KHACH_HANG(4, "Khách hàng");
 
-    private String label;
+    private int maQuyen;
+    private String tenChucVu;
 
-    Role(String label) {
-        this.label = label;
+    Role(int maQuyen, String tenChucVu) {
+        this.maQuyen = maQuyen;
+        this.tenChucVu = tenChucVu;
     }
 
-    public String getLabel() {
-        return label;
+    public int getMaQuyen() {
+        return maQuyen;
     }
+
+    public String getTenChucVu() {
+        return tenChucVu;
+    }
+
+    public static Role fromRole(int maQuyen) {
+        for (Role role : Role.values()) {
+            if (role.maQuyen == maQuyen) {
+                return role;
+            }
+        }
+        return null;
+    }
+
 }

@@ -386,7 +386,7 @@ public class SachDialog extends JDialog {
                 sNew.setGiaBan(giaBan);
                 sNew.setSoLuongTon(tonKho);
                 sNew.setSoLuongLoi(loi);
-                sNew.setTrangThai(TrangThaiSach.DangBan);
+                sNew.setTrangThai(TrangThaiSach.DANG_BAN);
 
                 String msg = "";
                 if (sach == null) {

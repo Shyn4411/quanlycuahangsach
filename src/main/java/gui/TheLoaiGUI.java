@@ -90,7 +90,6 @@ public class TheLoaiGUI extends JPanel {
         pnlToolbar.add(pnlAction, BorderLayout.EAST);
         add(pnlToolbar, BorderLayout.NORTH);
 
-        // --- 2. BẢNG DỮ LIỆU ---
         String[] columns = {"Mã Thể Loại", "Tên Thể Loại", "Trạng Thái"};
         model = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -133,19 +132,18 @@ public class TheLoaiGUI extends JPanel {
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
         tbl.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
 
-        // TÔ MÀU TRẠNG THÁI (HoatDong -> Xanh, NgungHoatDong -> Đỏ)
         tbl.getColumnModel().getColumn(2).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable t, Object v, boolean isS, boolean hasF, int r, int c) {
                 Component comp = super.getTableCellRendererComponent(t, v, isS, hasF, r, c);
                 setHorizontalAlignment(JLabel.CENTER);
                 if (v != null) {
-                    if (v.toString().equals("HoatDong")) {
-                        setText("Đang Hoạt Động");
-                        setForeground(new Color(46, 204, 113)); // Xanh lá
+                    if (v.toString().equals("HOẠT ĐỘNG")) {
+                        setText("HOẠT ĐỘNG");
+                        setForeground(new Color(46, 204, 113));
                     } else {
-                        setText("Ngừng Hoạt Động");
-                        setForeground(new Color(231, 76, 60)); // Đỏ
+                        setText("NGỪNG HOẠT ĐỘNG");
+                        setForeground(new Color(231, 76, 60));
                     }
                     setFont(getFont().deriveFont(Font.BOLD));
                 }
@@ -161,7 +159,7 @@ public class TheLoaiGUI extends JPanel {
 
     public void loadDataToTable() {
         model.setRowCount(0);
-        List<TheLoaiDTO> ds = tlBUS.getAll(); // Tủn nhớ tạo getAll trong BUS nhé
+        List<TheLoaiDTO> ds = tlBUS.getAll();
         if (ds != null) {
             for (TheLoaiDTO tl : ds) {
                 model.addRow(new Object[]{
@@ -192,7 +190,6 @@ public class TheLoaiGUI extends JPanel {
     }
 
     private void initEvents() {
-        // Tìm kiếm khi gõ
         txtTimKiem.addKeyListener(new java.awt.event.KeyAdapter() {
             @Override
             public void keyReleased(java.awt.event.KeyEvent evt) {
@@ -206,7 +203,6 @@ public class TheLoaiGUI extends JPanel {
         });
 
         btnThem.addActionListener(e -> {
-            // Tủn gọi TheLoaiDialog (null) lên để thêm mới
             JOptionPane.showMessageDialog(this, "Mở Dialog thêm Thể Loại!");
         });
 
@@ -216,7 +212,6 @@ public class TheLoaiGUI extends JPanel {
                 JOptionPane.showMessageDialog(this, "Vui lòng chọn thể loại cần sửa!");
                 return;
             }
-            // Lấy ID từ cột 0 (Cắt bỏ chữ TL)
             int id = Integer.parseInt(table.getValueAt(row, 0).toString().substring(2));
             JOptionPane.showMessageDialog(this, "Mở Dialog sửa Thể Loại ID: " + id);
         });
@@ -230,7 +225,6 @@ public class TheLoaiGUI extends JPanel {
             int confirm = JOptionPane.showConfirmDialog(this, "Xác nhận xóa thể loại này?", "Cảnh báo", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
                 int id = Integer.parseInt(table.getValueAt(row, 0).toString().substring(2));
-                // tlBUS.delete(id);
                 loadDataToTable();
             }
         });

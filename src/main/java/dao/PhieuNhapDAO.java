@@ -1,6 +1,7 @@
 package dao;
 
 import dto.PhieuNhapDTO;
+import enums.TrangThaiGiaoDich;
 import utils.JDBCUtil;
 
 import java.sql.*;
@@ -11,12 +12,11 @@ public class PhieuNhapDAO {
 
     public List<PhieuNhapDTO> getAll() {
         List<PhieuNhapDTO> list = new ArrayList<>();
-        // JOIN với bảng NhaCungCap và NhanVien để lấy tên
         String sql = "SELECT pn.*, ncc.TenNCC, nv.HoTen " +
                 "FROM PhieuNhap pn " +
                 "JOIN NhaCungCap ncc ON pn.MaNCC = ncc.MaNCC " +
                 "JOIN NhanVien nv ON pn.MaNV = nv.MaNV " +
-                "ORDER BY pn.MaPN DESC"; // Hiện phiếu mới nhất lên đầu
+                "ORDER BY pn.MaPN DESC";
 
         try (Connection conn = JDBCUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -27,8 +27,6 @@ public class PhieuNhapDAO {
                 pn.setMaPN(rs.getInt("MaPN"));
                 pn.setMaNV(rs.getInt("MaNV"));
                 pn.setMaNCC(rs.getInt("MaNCC"));
-
-                // Tủn nhớ thêm 2 biến String TenNCC, TenNV vào file PhieuNhapDTO.java nha
                 pn.setTenNCC(rs.getString("TenNCC"));
                 pn.setTenNV(rs.getString("HoTen"));
 
@@ -44,7 +42,6 @@ public class PhieuNhapDAO {
         return list;
     }
 
-    // Hàm insert Tủn đã sửa đúng (bỏ MaPNCode) nên giữ nguyên nhé
     public int insert(PhieuNhapDTO phieuNhapDTO) {
         String sql = "INSERT INTO PhieuNhap (MaNV, MaNCC, TongTien, TrangThai) VALUES (?, ?, ?, ?)";
 
@@ -67,8 +64,6 @@ public class PhieuNhapDAO {
         }
         return -1;
     }
-
-    // Các hàm update, delete phía dưới Tủn giữ nguyên là ok
     public boolean update(PhieuNhapDTO phieuNhapDTO) {
         String sql = "UPDATE PhieuNhap SET MaNV = ?, MaNCC = ?, TongTien = ?, TrangThai = ? WHERE MaPN = ?";
         try (Connection conn = JDBCUtil.getConnection();
@@ -87,7 +82,7 @@ public class PhieuNhapDAO {
         String sql = "UPDATE PhieuNhap SET TrangThai = ? WHERE MaPN = ?";
         try (Connection conn = JDBCUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, enums.TrangThaiGiaoDich.DaHuy.name());
+            ps.setString(1, TrangThaiGiaoDich.DA_HUY.name());
             ps.setInt(2, maPN);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) { e.printStackTrace(); }

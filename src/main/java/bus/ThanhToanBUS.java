@@ -16,7 +16,7 @@ public class ThanhToanBUS {
         return thanhToanDAO.getAll();
     }
 
-    public List<ThanhToanDTO> getByMaHD(int maHD) {
+    public ThanhToanDTO getByMaHD(int maHD) {
         if (maHD <= 0) return null;
         return thanhToanDAO.getByMaHD(maHD);
     }
@@ -25,7 +25,7 @@ public class ThanhToanBUS {
         if (tt.getMaHD() <= 0) return "Lỗi: Không xác định được hóa đơn thanh toán!";
 
         if (tt.getPhuongThuc() == null || tt.getPhuongThuc().name().trim().isEmpty()) {
-            return "Lỗi: Phải chọn phương thức thanh toán (TienMat / ChuyenKhoan)!";
+            return "Lỗi: Phải chọn phương thức thanh toán (Tiền mặt/ Chuyển khoản)!";
         }
 
         if (tt.getSoTien() == null || tt.getSoTien().compareTo(BigDecimal.ZERO) <= 0) {

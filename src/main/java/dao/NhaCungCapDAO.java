@@ -80,7 +80,7 @@ public class NhaCungCapDAO {
         try (Connection conn = JDBCUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setString(1, TrangThaiCoBan.NgungHoatDong.name());
+            ps.setString(1, TrangThaiCoBan.NGUNG_HOAT_DONG.name());
             ps.setInt(2, maNCC);
 
             return ps.executeUpdate() > 0;
@@ -118,4 +118,42 @@ public class NhaCungCapDAO {
         }
         return false;
     }
+
+    public boolean updateTrangThai(int maNCC, String trangThai) {
+        String sql = "UPDATE NhaCungCap SET TrangThai = ? WHERE MaNCC = ?";
+        try (java.sql.Connection conn = utils.JDBCUtil.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, trangThai);
+            ps.setInt(2, maNCC);
+
+            return ps.executeUpdate() > 0;
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public NhaCungCapDTO getById(int maNCC) {
+        String sql = "SELECT * FROM NhaCungCap WHERE MaNCC = ?";
+        try (java.sql.Connection conn = utils.JDBCUtil.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, maNCC);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    NhaCungCapDTO ncc = new NhaCungCapDTO();
+                    ncc.setMaNCC(rs.getInt("MaNCC"));
+                    ncc.setTenNCC(rs.getString("TenNCC"));
+                    ncc.setSoDienThoai(rs.getString("SoDienThoai"));
+                    ncc.setDiaChi(rs.getString("DiaChi"));
+                    ncc.setTrangThai(enums.TrangThaiCoBan.valueOf(rs.getString("TrangThai")));
+                    return ncc;
+                }
+            }
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
 }

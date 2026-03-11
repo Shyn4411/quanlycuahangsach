@@ -12,8 +12,6 @@ public class TacGiaBUS {
     }
 
     public TacGiaDTO getById(int id) {
-        // Tủn có thể bổ sung hàm getById trong DAO nếu cần,
-        // hoặc lọc từ danh sách getAll()
         return tgDAO.getAll().stream()
                 .filter(tg -> tg.getMaTacGia() == id)
                 .findFirst().orElse(null);

@@ -20,6 +20,9 @@ public class SachDTO {
     private LocalDateTime ngayTao;
     private LocalDateTime updatedAt;
 
+    private String tenLoai;
+    private String tenNXB;
+
     public SachDTO() {}
 
     public SachDTO(int maSach, String tenSach, int maLoai, String danhSachTacGia, int maNXB, String hinhAnh, BigDecimal giaGoc, BigDecimal giaBan, int soLuongTon, int soLuongLoi, TrangThaiSach trangThai, LocalDateTime ngayTao, LocalDateTime updatedAt) {
@@ -145,6 +148,23 @@ public class SachDTO {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+
+    public String getTenLoai() {
+        return tenLoai;
+    }
+
+    public void setTenLoai(String tenLoai) {
+        this.tenLoai = tenLoai;
+    }
+
+    public String getTenNXB() {
+        return tenNXB;
+    }
+
+    public void setTenNXB(String tenNXB) {
+        this.tenNXB = tenNXB;
     }
 
     @Override

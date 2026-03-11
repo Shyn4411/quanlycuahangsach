@@ -7,6 +7,7 @@ import dto.TacGia_SachDTO;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 public class SachBUS {
     private SachDAO sachDAO = new SachDAO();
@@ -80,6 +81,15 @@ public class SachBUS {
             }
         }
         return null;
+    }
+
+
+    public int getSoLuongSachSapHet(int gioiHan) {
+        return sachDAO.getSoLuongSachSapHet(gioiHan);
+    }
+
+    public Map<String, Integer> getTopSachBanChay(int soLuong) {
+        return sachDAO.getTopSachBanChay(soLuong);
     }
 
 }

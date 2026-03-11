@@ -1,12 +1,17 @@
 package bus;
 
 import dao.KhachHangDAO;
+import dao.TaiKhoanDAO;
 import dto.KhachHangDTO;
+import dto.TaiKhoanDTO;
+import enums.TrangThaiTaiKhoan;
+
 import java.util.List;
 
 public class KhachHangBUS {
 
     private KhachHangDAO khachHangDAO = new KhachHangDAO();
+    private TaiKhoanDAO taiKhoanDAO = new TaiKhoanDAO();
 
     public List<KhachHangDTO> getAll() {
         return khachHangDAO.getAll();
@@ -32,19 +37,34 @@ public class KhachHangBUS {
         return null;
     }
 
-    public String addKhachHang(KhachHangDTO kh) {
-        String error = validateKhachHang(kh);
-        if (error != null) return "Lỗi: " + error;
-
+    // Thêm tham số matKhau vào hàm
+    public String addKhachHang(KhachHangDTO kh, String matKhau) {
 
         if (khachHangDAO.checkSoDienThoaiDaTonTai(kh.getSoDienThoai())) {
-            return "Lỗi: Số điện thoại này đã tồn tại!";
+            return "Lỗi: Số điện thoại này đã tồn tại trong hệ thống!";
         }
 
-        if (khachHangDAO.insert(kh)) {
-            return "Thành công: Đã thêm khách hàng!";
+        // BƯỚC 1: TẠO TÀI KHOẢN TRƯỚC
+        TaiKhoanDTO tk = new TaiKhoanDTO();
+        tk.setMaQuyen(4); // Quyền khách hàng
+        tk.setTenDangNhap(kh.getSoDienThoai()); // SĐT làm username
+        tk.setMatKhau(matKhau); // Lấy mật khẩu từ giao diện truyền xuống
+        tk.setTrangThai(enums.TrangThaiTaiKhoan.HOAT_DONG);
+
+        int maTK = taiKhoanDAO.insertAndGetId(tk);
+
+        if (maTK <= 0) {
+            return "Lỗi: Không thể khởi tạo tài khoản cho khách hàng này!";
         }
-        return "Lỗi: Không thể thêm khách hàng!";
+
+        // BƯỚC 2: GẮN MÃ TÀI KHOẢN VÀO KHÁCH HÀNG VÀ LƯU
+        kh.setMaKH(maTK);
+
+        if (khachHangDAO.insert(kh)) {
+            return "Thành công: Đã tạo khách hàng! (Tài khoản: " + kh.getSoDienThoai() + ")";
+        } else {
+            return "Lỗi: Không thể lưu thông tin khách hàng!";
+        }
     }
 
     public String updateKhachHang(KhachHangDTO kh) {
@@ -71,17 +91,22 @@ public class KhachHangBUS {
 
 
     public KhachHangDTO getKhachHangByPhone(String phone) {
-        // Kiểm tra xem người dùng có gõ khoảng trắng bậy bạ hay không
         if (phone == null || phone.trim().isEmpty()) {
             return null;
         }
-        // Gọi DAO đi tìm
         return khachHangDAO.getKhachHangByPhone(phone.trim());
     }
 
     public KhachHangDTO getKhachHangById(int maKH) {
         if (maKH <= 0) return null;
         return khachHangDAO.getKhachHangById(maKH);
+    }
+
+    public String updateTrangThai(int maKH, enums.TrangThaiCoBan trangThaiMoi) {
+        if (khachHangDAO.updateTrangThai(maKH, trangThaiMoi.name())) {
+            return "Thành công: Đã cập nhật trạng thái khách hàng!";
+        }
+        return "Lỗi: Không thể cập nhật trạng thái!";
     }
 
 }

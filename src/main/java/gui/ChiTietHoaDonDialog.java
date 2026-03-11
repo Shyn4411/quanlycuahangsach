@@ -182,33 +182,48 @@ public class ChiTietHoaDonDialog extends JDialog {
 
     private void loadChiTietHoaDon() {
         modelChiTiet.setRowCount(0);
-        double tongTienHD = 0;
+        double tongTienThucTe = 0; // Tổng tiền sau khi trừ hàng trả
 
         try {
             String soHD = maHD.replaceAll("[^0-9]", "");
             if (soHD.isEmpty()) return;
 
             int idHD = Integer.parseInt(soHD);
+
+            // 1. Lấy danh sách chi tiết (Đã bao gồm thông tin số lượng đã trả)
+            // Tủn nhớ trong DAO/BUS hàm này phải lấy thêm cột SoLuongDaTra từ bảng PhieuTra nhé
             List<ChiTietHoaDonDTO> list = hoaDonBUS.getChiTietByMaHD(idHD);
 
             if (list != null) {
                 for (ChiTietHoaDonDTO ct : list) {
-                    tongTienHD += ct.getThanhTien().doubleValue();
+                    // 2. Tính số lượng thực tế khách còn giữ
+                    int slGoc = ct.getSoLuong();
+                    int slTra = ct.getSoLuongDaTra(); // Giả sử BUS đã map được số này
+                    int slConLai = slGoc - slTra;
+
+                    // 3. Tính lại thành tiền dựa trên số lượng còn lại
+                    double donGia = ct.getDonGia() != null ? ct.getDonGia().doubleValue() : 0;
+                    double thanhTienMoi = slConLai * donGia;
+
+                    tongTienThucTe += thanhTienMoi;
+
+                    // 4. Hiển thị lên bảng
+                    String hienThiSL = (slTra > 0) ? slConLai + " (Đã trả " + slTra + ")" : String.valueOf(slConLai);
 
                     modelChiTiet.addRow(new Object[]{
                             "S" + String.format("%03d", ct.getMaSach()),
                             ct.getTenSach() != null ? ct.getTenSach() : "Không tìm thấy",
-                            ct.getSoLuong(),
-                            df.format(ct.getDonGia()),
-                            df.format(ct.getThanhTien())
+                            hienThiSL, // Hiển thị số lượng kèm chú thích trả hàng
+                            df.format(donGia),
+                            df.format(thanhTienMoi)
                     });
                 }
             }
-            lblTongTien.setText("TỔNG TIỀN: " + df.format(tongTienHD));
+            lblTongTien.setText("TỔNG TIỀN (SAU TRẢ): " + df.format(tongTienThucTe));
 
         } catch (Exception e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Lỗi tải dữ liệu chi tiết: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Lỗi tải dữ liệu: " + e.getMessage());
         }
     }
 

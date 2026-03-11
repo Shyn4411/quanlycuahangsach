@@ -35,7 +35,7 @@ public class PhieuTraKhachHangBUS {
                 LichSuKhoDTO lichSu = new LichSuKhoDTO();
                 lichSu.setMaSach(ct.getMaSach());
                 lichSu.setLoaiGiaoDich(LoaiGiaoDich.KHACH_TRA);
-                lichSu.setLoaiChungTu(LoaiChungTu.PTKH);
+                lichSu.setLoaiChungTu(LoaiChungTu.PHIEU_TRA_KHACH_HANG);
                 lichSu.setMaChungTu(maPhieuTra);
                 lichSu.setSoLuongThayDoi(ct.getSoLuong());
                 lichSu.setGhiChu("Khách trả hàng (Mã PTK: " + maPhieuTra + ")");
@@ -46,4 +46,9 @@ public class PhieuTraKhachHangBUS {
         }
         return "Lỗi: Không thể tạo phiếu trả hàng!";
     }
+
+    public List<PhieuTraKhachHangDTO> getAll() {
+        return ptkhDAO.getAll();
+    }
+
 }

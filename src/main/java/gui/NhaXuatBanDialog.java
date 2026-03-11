@@ -91,7 +91,7 @@ public class NhaXuatBanDialog extends JDialog {
         if (!isEditMode) {
             NhaXuatBanDTO newNXB = new NhaXuatBanDTO();
             newNXB.setTenNXB(ten);
-            newNXB.setTrangThai(TrangThaiCoBan.HoatDong);
+            newNXB.setTrangThai(TrangThaiCoBan.HOAT_DONG);
             message = nxbBUS.addNhaXuatBan(newNXB);
         } else {
             currentNXB.setTenNXB(ten);

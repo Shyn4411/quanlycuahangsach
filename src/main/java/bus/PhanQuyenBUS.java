@@ -50,6 +50,13 @@ public class PhanQuyenBUS {
         String error = validatePhanQuyen(pq);
         if (error != null) return "Lỗi: " + error;
 
+        if (pq.getMaQuyen() >= 1 && pq.getMaQuyen() <= 4) {
+            PhanQuyenDTO quyenCu = phanQuyenDAO.getById(pq.getMaQuyen());
+            if (quyenCu != null && !quyenCu.getMaCode().equals(pq.getMaCode())) {
+                return "Lỗi: Tuyệt đối không được thay đổi Mã Code của các quyền hệ thống mặc định!";
+            }
+        }
+
         if (phanQuyenDAO.checkMaCodeBiTrungKhiSua(pq.getMaCode(), pq.getMaQuyen())) {
             return "Lỗi: Mã code này đang được sử dụng bởi một quyền khác!";
         }

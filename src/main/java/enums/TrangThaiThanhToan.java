@@ -1,5 +1,5 @@
 package enums;
 
 public enum TrangThaiThanhToan {
-    ThanhCong, ThatBai
+    THANH_CONG, THAT_BAI
 }

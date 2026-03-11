@@ -11,6 +11,7 @@ public class TaiKhoanDTO {
     private LocalDateTime ngayTao;
     private LocalDateTime updatedAt;
     private Integer maNhanVien;
+    private Integer maKhachHang;
 
 
     public TaiKhoanDTO() {}
@@ -79,8 +80,23 @@ public class TaiKhoanDTO {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
-    public Integer getMaNhanVien() { return maNhanVien; }
-    public void setMaNhanVien(Integer maNhanVien) { this.maNhanVien = maNhanVien; }
+
+    public Integer getMaNhanVien() {
+        return maNhanVien;
+    }
+
+    public void setMaNhanVien(Integer maNhanVien) {
+        this.maNhanVien = maNhanVien;
+    }
+
+    public Integer getMaKhachHang() {
+        return maKhachHang;
+    }
+
+    public void setMaKhachHang(Integer maKhachHang) {
+        this.maKhachHang = maKhachHang;
+    }
+
     @Override
     public String toString() {
         return "TaiKhoanDTO{" +

@@ -104,7 +104,7 @@ public class TheLoaiDialog extends JDialog {
             TheLoaiDTO newTL = new TheLoaiDTO();
             newTL.setTenLoai(ten);
             // Mặc định là HoatDong
-            newTL.setTrangThai(TrangThaiCoBan.HoatDong);
+            newTL.setTrangThai(TrangThaiCoBan.HOAT_DONG);
 
             message = tlBUS.addTheLoai(newTL);
         } else {

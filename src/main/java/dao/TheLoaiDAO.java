@@ -4,10 +4,7 @@ import dto.TheLoaiDTO;
 import enums.TrangThaiCoBan;
 import utils.JDBCUtil;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,10 +36,10 @@ public class TheLoaiDAO {
         String sql = "INSERT INTO TheLoai (TenLoai, TrangThai) VALUES (?, ?)";
 
         try (Connection conn = JDBCUtil.getConnection();
-            PreparedStatement ps = conn.prepareStatement(sql)) {
+            PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             ps.setString(1, theLoaiDTO.getTenLoai());
-            ps.setString(2, theLoaiDTO.getTrangThai().name());
+            ps.setString(2, TrangThaiCoBan.HOAT_DONG.name());
 
             int affectedRows = ps.executeUpdate();
             if (affectedRows > 0) {
@@ -79,7 +76,7 @@ public class TheLoaiDAO {
         try (Connection conn = JDBCUtil.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setString(1, TrangThaiCoBan.NgungHoatDong.name());
+            ps.setString(1, TrangThaiCoBan.NGUNG_HOAT_DONG.name());
             ps.setInt(2, maLoai);
 
             return ps.executeUpdate() > 0;
@@ -89,8 +86,7 @@ public class TheLoaiDAO {
         return false;
     }
 
-    // Lấy 1 Thể Loại dựa vào Mã Thể Loại
-    public dto.TheLoaiDTO getById(int id) {
+    public TheLoaiDTO getById(int id) {
         String sql = "SELECT * FROM TheLoai WHERE MaLoai = ?";
         try (java.sql.Connection conn = utils.JDBCUtil.getConnection();
              java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -101,14 +97,16 @@ public class TheLoaiDAO {
                     dto.TheLoaiDTO tl = new dto.TheLoaiDTO();
                     tl.setMaLoai(rs.getInt("MaLoai"));
                     tl.setTenLoai(rs.getString("TenLoai"));
-                    // Nếu bảng TheLoai của Tủn có thêm biến nào thì set thêm ở đây
+                    tl.setTrangThai(
+                            TrangThaiCoBan.valueOf(rs.getString("TrangThai"))
+                    );
                     return tl;
                 }
             }
         } catch (java.sql.SQLException e) {
             e.printStackTrace();
         }
-        return null; // Trả về null nếu không tìm thấy
+        return null;
     }
 
 }

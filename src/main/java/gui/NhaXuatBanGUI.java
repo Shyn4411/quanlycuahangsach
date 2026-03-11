@@ -66,7 +66,7 @@ public class NhaXuatBanGUI extends JPanel {
         pnlAction.setOpaque(false);
         btnThem = new JButton("Thêm Mới");
         styleButton(btnThem, COL_PRIMARY);
-        btnSua = new JButton("Sửa");
+        btnSua = new JButton("Chỉnh Sửa");
         styleButton(btnSua, COL_SIDEBAR);
         btnXoa = new JButton("Xóa");
         styleButton(btnXoa, new Color(231, 76, 60));
@@ -80,7 +80,6 @@ public class NhaXuatBanGUI extends JPanel {
         pnlToolbar.add(pnlAction, BorderLayout.EAST);
         add(pnlToolbar, BorderLayout.NORTH);
 
-        // --- 2. BẢNG DỮ LIỆU (Đã rút gọn còn 3 cột) ---
         String[] columns = {"Mã NXB", "Tên Nhà Xuất Bản", "Trạng Thái"};
         model = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -97,6 +96,7 @@ public class NhaXuatBanGUI extends JPanel {
         tbl.setRowHeight(40);
         tbl.setSelectionBackground(new Color(232, 240, 255));
         tbl.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        tbl.setSelectionForeground(Color.BLACK);
 
         // --- STYLE HEADER ---
         JTableHeader header = tbl.getTableHeader();
@@ -120,13 +120,13 @@ public class NhaXuatBanGUI extends JPanel {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 setHorizontalAlignment(JLabel.CENTER);
                 if (value != null) {
-                    if (value.toString().equals("HoatDong")) {
+                    if (value.toString().equals("HOẠT ĐỘNG")) {
                         c.setForeground(new Color(46, 204, 113));
-                        setText("Hoạt Động");
+                        setText("HOẠT ĐỘNG");
                         setFont(getFont().deriveFont(Font.BOLD));
                     } else {
                         c.setForeground(new Color(231, 76, 60));
-                        setText("Ngừng Hoạt Động");
+                        setText("NGỪNG HOẠT ĐỘNG");
                         setFont(getFont().deriveFont(Font.BOLD));
                     }
                 }
@@ -135,7 +135,7 @@ public class NhaXuatBanGUI extends JPanel {
             }
         });
 
-        tbl.getColumnModel().getColumn(1).setPreferredWidth(350); // Tên NXB rộng rãi
+        tbl.getColumnModel().getColumn(1).setPreferredWidth(350);
     }
 
     public void loadDataToTable() {
@@ -153,7 +153,6 @@ public class NhaXuatBanGUI extends JPanel {
     }
 
     private void initEvents() {
-        // Tìm kiếm nhanh (Đã bỏ lọc theo SDT)
         txtTimKiem.addKeyListener(new java.awt.event.KeyAdapter() {
             @Override
             public void keyReleased(java.awt.event.KeyEvent evt) {

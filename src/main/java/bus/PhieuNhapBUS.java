@@ -9,6 +9,7 @@ import dto.LichSuKhoDTO;
 import dto.PhieuNhapDTO;
 import enums.LoaiChungTu;
 import enums.LoaiGiaoDich;
+import enums.TrangThaiGiaoDich;
 
 import java.util.List;
 
@@ -38,7 +39,7 @@ public class PhieuNhapBUS {
 
 
     public String hoanThanhPhieuNhap(int maPhieuNhap) {
-        if (phieuNhapDAO.updateTrangThai(maPhieuNhap, enums.TrangThaiGiaoDich.HoanThanh.name())) {
+        if (phieuNhapDAO.updateTrangThai(maPhieuNhap, TrangThaiGiaoDich.HOAN_THANH.name())) {
 
             List<ChiTietPhieuNhapDTO> dsChiTiet = chiTietPhieuNhapDAO.getByMaPN(maPhieuNhap);
 
@@ -48,9 +49,9 @@ public class PhieuNhapBUS {
                 LichSuKhoDTO lichSu = new LichSuKhoDTO();
                 lichSu.setMaSach(ct.getMaSach());
                 lichSu.setLoaiGiaoDich(LoaiGiaoDich.NHAP_HANG);
-                lichSu.setLoaiChungTu(LoaiChungTu.PHIEUNHAP);
+                lichSu.setLoaiChungTu(LoaiChungTu.PHIEU_NHAP);
                 lichSu.setMaChungTu(maPhieuNhap);
-                lichSu.setSoLuongThayDoi(ct.getSoLuong()); // Dấu Dương
+                lichSu.setSoLuongThayDoi(ct.getSoLuong());
                 lichSu.setGhiChu("Hoàn tất nhập hàng mã PN" + String.format("%03d", maPhieuNhap));
 
                 lichSuKhoDAO.insert(lichSu);
@@ -61,11 +62,11 @@ public class PhieuNhapBUS {
     }
 
     public String huyPhieuNhap(int maPhieuNhap, String trangThaiHienTai) {
-        if (!trangThaiHienTai.equals(enums.TrangThaiGiaoDich.ChoXuLy.name())) {
+        if (!trangThaiHienTai.equals(TrangThaiGiaoDich.CHO_XU_LY.name())) {
             return "Lỗi: Chỉ có thể hủy phiếu nhập đang chờ xử lý!";
         }
 
-        if (phieuNhapDAO.updateTrangThai(maPhieuNhap, enums.TrangThaiGiaoDich.DaHuy.name())) {
+        if (phieuNhapDAO.updateTrangThai(maPhieuNhap, TrangThaiGiaoDich.DA_HUY.name())) {
             return "Thành công: Đã hủy phiếu nhập!";
         }
         return "Lỗi: Không thể hủy phiếu nhập!";
@@ -80,7 +81,6 @@ public class PhieuNhapBUS {
     }
 
     public PhieuNhapDTO getById(int maPN) {
-        // Tủn có thể lọc từ danh sách getAll() hoặc viết hàm getById riêng trong DAO cho nhanh
         List<PhieuNhapDTO> all = phieuNhapDAO.getAll();
         for (PhieuNhapDTO pn : all) {
             if (pn.getMaPN() == maPN) return pn;

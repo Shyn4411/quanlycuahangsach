@@ -66,4 +66,22 @@ public class NhaCungCapBUS {
         }
         return "Lỗi: Thao tác thất bại!";
     }
+
+
+
+    public String updateTrangThai(int maNCC, enums.TrangThaiCoBan trangThaiMoi) {
+        if (maNCC <= 0) {
+            return "Lỗi: Mã nhà cung cấp không hợp lệ!";
+        }
+        if (nccDAO.updateTrangThai(maNCC, trangThaiMoi.name())) {
+            return "Thành công: Đã cập nhật trạng thái nhà cung cấp!";
+        }
+
+        return "Lỗi: Không thể cập nhật trạng thái trong cơ sở dữ liệu!";
+    }
+
+
+    public NhaCungCapDTO getById(int maNCC) {
+        return nccDAO.getById(maNCC);
+    }
 }

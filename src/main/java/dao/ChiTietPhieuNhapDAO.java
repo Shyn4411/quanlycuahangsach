@@ -14,7 +14,6 @@ public class ChiTietPhieuNhapDAO {
 
     public List<ChiTietPhieuNhapDTO> getByMaPN(int maPN) {
         List<ChiTietPhieuNhapDTO> list = new ArrayList<>();
-        // Đổi DonGia thành GiaNhap
         String sql = "SELECT MaCTPN, MaPN, MaSach, SoLuong, GiaNhap, ThanhTien FROM ChiTietPhieuNhap WHERE MaPN = ?";
 
         try (Connection conn = JDBCUtil.getConnection();
@@ -29,8 +28,6 @@ public class ChiTietPhieuNhapDAO {
                     ct.setMaPN(rs.getInt("MaPN"));
                     ct.setMaSach(rs.getInt("MaSach"));
                     ct.setSoLuong(rs.getInt("SoLuong"));
-
-                    // SỬA "DonGia" THÀNH "GiaNhap" ĐỂ KHÔNG BỊ VĂNG LỖI
                     ct.setGiaNhap(rs.getBigDecimal("GiaNhap"));
 
                     ct.setThanhTien(rs.getBigDecimal("ThanhTien"));
@@ -46,7 +43,6 @@ public class ChiTietPhieuNhapDAO {
     }
 
     public boolean insert(ChiTietPhieuNhapDTO ct) {
-        // Đổi DonGia thành GiaNhap trong câu lệnh INSERT
         String sql = "INSERT INTO ChiTietPhieuNhap (MaPN, MaSach, SoLuong, GiaNhap) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = JDBCUtil.getConnection();

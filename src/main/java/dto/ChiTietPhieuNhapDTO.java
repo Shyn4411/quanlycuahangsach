@@ -6,6 +6,7 @@ public class ChiTietPhieuNhapDTO {
     private int maCTPN;
     private int maPN;
     private int maSach;
+    private String tenSach;
     private int soLuong;
     private BigDecimal giaNhap;
     private BigDecimal thanhTien;
@@ -68,6 +69,14 @@ public class ChiTietPhieuNhapDTO {
 
     public void setThanhTien(BigDecimal thanhTien) {
         this.thanhTien = thanhTien;
+    }
+
+    public String getTenSach() {
+        return tenSach;
+    }
+
+    public void setTenSach(String tenSach) {
+        this.tenSach = tenSach;
     }
 
     @Override

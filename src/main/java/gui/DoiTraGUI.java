@@ -7,25 +7,30 @@ import dto.ChiTietTraKhachHangDTO;
 import dto.HoaDonDTO;
 import dto.PhieuTraKhachHangDTO;
 import dto.TaiKhoanDTO;
+import enums.TrangThaiGiaoDich;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.awt.Font;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.FileOutputStream;
 import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.*;
-import java.io.FileOutputStream;
 
 public class DoiTraGUI extends JPanel {
 
@@ -33,17 +38,26 @@ public class DoiTraGUI extends JPanel {
     private HoaDonBUS hoaDonBUS = new HoaDonBUS();
     private PhieuTraKhachHangBUS phieuTraBUS = new PhieuTraKhachHangBUS();
 
-    // Dữ liệu tạm
+    // Dữ liệu tạm Tab 1
     private HoaDonDTO currentHoaDon = null;
     private List<ChiTietHoaDonDTO> listChiTietHD = new ArrayList<>();
     private List<ChiTietTraKhachHangDTO> dsTraHang = new ArrayList<>();
+    private DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    // UI Components
+    // UI Components Tab 1 (TẠO ĐỔI TRẢ)
     private JTextField txtSearchHD, txtLyDo;
-    private JTable tblHoaDonCu, tblTraHang;
-    private DefaultTableModel modelHDCu, modelTraHang;
+    private JTable tblHoaDonCu, tblTraHang, tblDanhSachHD;
+    private DefaultTableModel modelHDCu, modelTraHang, modelDanhSachHD;
+    private TableRowSorter<DefaultTableModel> sorterDSHD;
     private JLabel lblTongTienHoan, lblThongTinHD;
-    private JComboBox<String> cbxTinhTrang;
+    private JButton btnXacNhan, btnXoaMon;
+
+    // UI Components Tab 2 (LỊCH SỬ)
+    private JTable tblLichSu;
+    private DefaultTableModel modelLichSu;
+    private JTextField txtSearchLichSu;
+    private TableRowSorter<DefaultTableModel> sorterLichSu;
+    private JButton btnLamMoiLS;
 
     final Color COL_PRIMARY = new Color(232, 60, 145);
     final Color COL_SIDEBAR = new Color(67, 51, 76);
@@ -52,65 +66,96 @@ public class DoiTraGUI extends JPanel {
     public DoiTraGUI(TaiKhoanDTO user) {
         this.currentUser = user;
         initUI();
+        loadDanhSachHoaDon();
+        loadLichSuTraHang(); // Tải data lịch sử
     }
 
     private void initUI() {
-        setLayout(new BorderLayout(15, 15));
+        setLayout(new BorderLayout());
         setBackground(COL_BG_MAIN);
-        setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // ==========================================
-        // BÊN TRÁI: TÌM KIẾM HÓA ĐƠN GỐC
-        // ==========================================
+        // NÂNG CẤP: Tạo JTabbedPane chứa 2 giao diện
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        tabbedPane.setBackground(Color.WHITE);
+
+        // Thêm 2 Tabs
+        tabbedPane.addTab("  TẠO PHIẾU ĐỔI TRẢ  ", createTabTaoDoiTra());
+        tabbedPane.addTab("  LỊCH SỬ TRẢ HÀNG  ", createTabLichSu());
+
+        add(tabbedPane, BorderLayout.CENTER);
+    }
+
+    // =========================================================
+    // GIAO DIỆN TAB 1: TẠO PHIẾU ĐỔI TRẢ (Giữ nguyên cấu trúc cũ)
+    // =========================================================
+    private JPanel createTabTaoDoiTra() {
+        JPanel pnlMain = new JPanel(new BorderLayout(15, 15));
+        pnlMain.setBackground(COL_BG_MAIN);
+        pnlMain.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        // TÁCH TRÁI - PHẢI
         JPanel pnlLeft = new JPanel(new BorderLayout(10, 10));
         pnlLeft.setOpaque(false);
-        pnlLeft.setPreferredSize(new Dimension(500, 0));
+        pnlLeft.setPreferredSize(new Dimension(550, 0));
+
+        JPanel pnlTopLeft = new JPanel(new BorderLayout());
+        pnlTopLeft.setBackground(Color.WHITE);
+        pnlTopLeft.setBorder(BorderFactory.createTitledBorder(
+                new LineBorder(Color.LIGHT_GRAY), "CHỌN HÓA ĐƠN CẦN ĐỔI TRẢ",
+                TitledBorder.LEFT, TitledBorder.TOP, new Font("Segoe UI", Font.BOLD, 13), COL_SIDEBAR));
+        pnlTopLeft.setPreferredSize(new Dimension(0, 250));
 
         JPanel pnlSearch = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         pnlSearch.setBackground(Color.WHITE);
-        pnlSearch.setBorder(new LineBorder(new Color(230, 230, 230)));
-        pnlSearch.add(new JLabel("Nhập Mã HĐ (VD: 1, 2...):"));
+        pnlSearch.add(new JLabel("Tìm Mã HĐ:"));
 
         txtSearchHD = new JTextField(15);
-        txtSearchHD.setPreferredSize(new Dimension(150, 32));
+        txtSearchHD.setPreferredSize(new Dimension(200, 30));
         pnlSearch.add(txtSearchHD);
+        pnlTopLeft.add(pnlSearch, BorderLayout.NORTH);
 
-        JButton btnSearch = new JButton("Tìm Kiếm");
-        styleButton(btnSearch, COL_SIDEBAR, 100);
-        pnlSearch.add(btnSearch);
+        String[] colsDSHD = {"Mã HĐ", "Ngày Bán", "Tổng Tiền", "Trạng Thái"};
+        modelDanhSachHD = new DefaultTableModel(colsDSHD, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        tblDanhSachHD = new JTable(modelDanhSachHD);
+        styleTable(tblDanhSachHD);
+        sorterDSHD = new TableRowSorter<>(modelDanhSachHD);
+        tblDanhSachHD.setRowSorter(sorterDSHD);
+        pnlTopLeft.add(new JScrollPane(tblDanhSachHD), BorderLayout.CENTER);
 
-        pnlLeft.add(pnlSearch, BorderLayout.NORTH);
+        JLabel lblHintTop = new JLabel("<html><i>* Nhấp đúp (Double-click) vào hóa đơn để xem chi tiết bên dưới</i></html>");
+        lblHintTop.setForeground(Color.RED);
+        pnlTopLeft.add(lblHintTop, BorderLayout.SOUTH);
 
-        // Bảng Chi Tiết Hóa Đơn Cũ
+        pnlLeft.add(pnlTopLeft, BorderLayout.NORTH);
+
+        JPanel pnlTableLeft = new JPanel(new BorderLayout());
+        pnlTableLeft.setBackground(Color.WHITE);
+        pnlTableLeft.setBorder(BorderFactory.createTitledBorder(
+                new LineBorder(Color.LIGHT_GRAY), "SẢN PHẨM TRONG HÓA ĐƠN ĐÃ CHỌN",
+                TitledBorder.LEFT, TitledBorder.TOP, new Font("Segoe UI", Font.BOLD, 13), COL_SIDEBAR));
+
+        lblThongTinHD = new JLabel("Chưa chọn hóa đơn nào");
+        lblThongTinHD.setFont(new Font("Segoe UI", Font.ITALIC, 13));
+        lblThongTinHD.setBorder(new EmptyBorder(5, 10, 10, 10));
+        pnlTableLeft.add(lblThongTinHD, BorderLayout.NORTH);
+
         String[] colsHD = {"Mã Sách", "Tên Sách", "Giá Mua", "SL Đã Mua"};
         modelHDCu = new DefaultTableModel(colsHD, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         tblHoaDonCu = new JTable(modelHDCu);
         styleTable(tblHoaDonCu);
-
-        JPanel pnlTableLeft = new JPanel(new BorderLayout());
-        pnlTableLeft.setBackground(Color.WHITE);
-        pnlTableLeft.setBorder(BorderFactory.createTitledBorder(
-                new LineBorder(Color.LIGHT_GRAY), "SẢN PHẨM TRONG HÓA ĐƠN",
-                TitledBorder.LEFT, TitledBorder.TOP, new Font("Segoe UI", Font.BOLD, 13), COL_SIDEBAR));
-
-        lblThongTinHD = new JLabel("Chưa chọn hóa đơn");
-        lblThongTinHD.setFont(new Font("Segoe UI", Font.ITALIC, 13));
-        lblThongTinHD.setBorder(new EmptyBorder(5, 10, 10, 10));
-        pnlTableLeft.add(lblThongTinHD, BorderLayout.NORTH);
         pnlTableLeft.add(new JScrollPane(tblHoaDonCu), BorderLayout.CENTER);
 
-        // Hướng dẫn
-        JLabel lblHint = new JLabel("<html><i>* Nhấp đúp (Double-click) vào sản phẩm bên trên để đưa vào danh sách trả</i></html>");
+        JLabel lblHint = new JLabel("<html><i>* Nhấp đúp (Double-click) vào sản phẩm để đưa vào danh sách trả</i></html>");
         lblHint.setForeground(Color.RED);
         pnlTableLeft.add(lblHint, BorderLayout.SOUTH);
 
         pnlLeft.add(pnlTableLeft, BorderLayout.CENTER);
 
-        // ==========================================
-        // BÊN PHẢI: GIỎ HÀNG TRẢ & XỬ LÝ HOÀN TIỀN
-        // ==========================================
         JPanel pnlRight = new JPanel(new BorderLayout(10, 10));
         pnlRight.setOpaque(false);
 
@@ -120,15 +165,18 @@ public class DoiTraGUI extends JPanel {
                 new LineBorder(Color.LIGHT_GRAY), "DANH SÁCH SÁCH TRẢ LẠI",
                 TitledBorder.LEFT, TitledBorder.TOP, new Font("Segoe UI", Font.BOLD, 13), Color.RED));
 
-        String[] colsTra = {"Sách", "SL Trả", "Tình Trạng", "Tiền Hoàn"};
+        String[] colsTra = {"Mã Sách", "Sách", "SL Trả", "Tình Trạng", "Tiền Hoàn"};
         modelTraHang = new DefaultTableModel(colsTra, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         tblTraHang = new JTable(modelTraHang);
         styleTable(tblTraHang);
+
+        tblTraHang.getColumnModel().getColumn(0).setPreferredWidth(60);
+        tblTraHang.getColumnModel().getColumn(1).setPreferredWidth(180);
         pnlTableRight.add(new JScrollPane(tblTraHang), BorderLayout.CENTER);
 
-        JButton btnXoaMon = new JButton("Xóa món trả");
+        btnXoaMon = new JButton("Xóa món trả");
         btnXoaMon.setForeground(Color.RED);
         btnXoaMon.setContentAreaFilled(false);
         btnXoaMon.setBorderPainted(false);
@@ -137,50 +185,143 @@ public class DoiTraGUI extends JPanel {
 
         pnlRight.add(pnlTableRight, BorderLayout.CENTER);
 
-        // Khu vực chốt phiếu
-        JPanel pnlCheckout = new JPanel();
-        pnlCheckout.setLayout(new BoxLayout(pnlCheckout, BoxLayout.Y_AXIS));
+        JPanel pnlCheckout = new JPanel(new BorderLayout(10, 15));
         pnlCheckout.setBackground(Color.WHITE);
         pnlCheckout.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(Color.LIGHT_GRAY), new EmptyBorder(15, 20, 15, 20)));
 
         JPanel pnlLyDo = new JPanel(new BorderLayout(10, 0));
         pnlLyDo.setOpaque(false);
-        pnlLyDo.add(new JLabel("Lý do trả tổng quát:"), BorderLayout.WEST);
+        pnlLyDo.add(new JLabel("Lý do trả:"), BorderLayout.WEST);
         txtLyDo = new JTextField("Khách không ưng ý");
         pnlLyDo.add(txtLyDo, BorderLayout.CENTER);
+        pnlCheckout.add(pnlLyDo, BorderLayout.NORTH);
 
+        JPanel pnlTien = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 10));
+        pnlTien.setOpaque(false);
         lblTongTienHoan = new JLabel("CẦN HOÀN TRẢ: 0 VNĐ");
-        lblTongTienHoan.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        lblTongTienHoan.setFont(new Font("Segoe UI", Font.BOLD, 20));
         lblTongTienHoan.setForeground(COL_PRIMARY);
+        pnlTien.add(lblTongTienHoan);
+        pnlCheckout.add(pnlTien, BorderLayout.CENTER);
 
-
-        JButton btnXacNhan = new JButton("XÁC NHẬN TRẢ HÀNG & HOÀN TIỀN");
+        btnXacNhan = new JButton("XÁC NHẬN TRẢ HÀNG & HOÀN TIỀN");
         btnXacNhan.setUI(new javax.swing.plaf.basic.BasicButtonUI());
-        btnXacNhan.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        btnXacNhan.setPreferredSize(new Dimension(0, 45));
         btnXacNhan.setBackground(COL_PRIMARY);
         btnXacNhan.setForeground(Color.WHITE);
         btnXacNhan.setOpaque(true);
         btnXacNhan.setFont(new Font("Segoe UI", Font.BOLD, 15));
         btnXacNhan.setFocusPainted(false);
         btnXacNhan.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnXacNhan.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        pnlCheckout.add(pnlLyDo);
-        pnlCheckout.add(Box.createVerticalStrut(20));
-        pnlCheckout.add(lblTongTienHoan);
-        pnlCheckout.add(Box.createVerticalStrut(20));
-        pnlCheckout.add(btnXacNhan);
+        pnlCheckout.add(btnXacNhan, BorderLayout.SOUTH);
 
         pnlRight.add(pnlCheckout, BorderLayout.SOUTH);
 
-        add(pnlLeft, BorderLayout.WEST);
-        add(pnlRight, BorderLayout.CENTER);
+        pnlMain.add(pnlLeft, BorderLayout.WEST);
+        pnlMain.add(pnlRight, BorderLayout.CENTER);
 
-        // ==========================================
-        // SỰ KIỆN (EVENTS)
-        // ==========================================
-        btnSearch.addActionListener(e -> timKiemHoaDon());
+        initEventsTab1(); // Cài đặt sự kiện cho Tab 1
+
+        return pnlMain;
+    }
+
+    // =========================================================
+    // GIAO DIỆN TAB 2: LỊCH SỬ TRẢ HÀNG
+    // =========================================================
+    private JPanel createTabLichSu() {
+        JPanel pnlMain = new JPanel(new BorderLayout(15, 15));
+        pnlMain.setBackground(COL_BG_MAIN);
+        pnlMain.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        // Khung lọc tìm kiếm trên cùng
+        JPanel pnlTop = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
+        pnlTop.setBackground(Color.WHITE);
+        pnlTop.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+
+        pnlTop.add(new JLabel("Tìm Mã Phiếu/Mã HĐ/Mã NV:"));
+        txtSearchLichSu = new JTextField(20);
+        txtSearchLichSu.setPreferredSize(new Dimension(200, 32));
+        pnlTop.add(txtSearchLichSu);
+
+        btnLamMoiLS = new JButton("Làm Mới");
+        btnLamMoiLS.setUI(new javax.swing.plaf.basic.BasicButtonUI());
+        btnLamMoiLS.setBackground(COL_SIDEBAR);
+        btnLamMoiLS.setForeground(Color.WHITE);
+        btnLamMoiLS.setPreferredSize(new Dimension(100, 32));
+        btnLamMoiLS.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        pnlTop.add(btnLamMoiLS);
+
+        pnlMain.add(pnlTop, BorderLayout.NORTH);
+
+        // Bảng lịch sử
+        String[] colsLS = {"Mã Phiếu Trả", "Mã HĐ Gốc", "Nhân Viên XL", "Lý Do Trả", "Ngày Xử Lý", "Tiền Hoàn Lại"};
+        modelLichSu = new DefaultTableModel(colsLS, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        tblLichSu = new JTable(modelLichSu);
+        styleTable(tblLichSu);
+
+        sorterLichSu = new TableRowSorter<>(modelLichSu);
+        tblLichSu.setRowSorter(sorterLichSu);
+
+        pnlMain.add(new JScrollPane(tblLichSu), BorderLayout.CENTER);
+
+        initEventsTab2(); // Cài đặt sự kiện cho Tab 2
+
+        return pnlMain;
+    }
+
+    // =========================================================
+    // CÁC HÀM XỬ LÝ DỮ LIỆU & SỰ KIỆN TAB 1
+    // =========================================================
+    private void loadDanhSachHoaDon() {
+        modelDanhSachHD.setRowCount(0);
+        List<HoaDonDTO> list = hoaDonBUS.getAll();
+        if (list != null) {
+            for (HoaDonDTO hd : list) {
+                if (hd.getTrangThai() == TrangThaiGiaoDich.HOAN_THANH) {
+                    modelDanhSachHD.addRow(new Object[]{
+                            "HD" + String.format("%03d", hd.getMaHD()),
+                            hd.getNgayTao() != null ? hd.getNgayTao().format(dtf) : "N/A",
+                            String.format("%,.0f", hd.getThanhTien()),
+                            "HOÀN THÀNH"
+                    });
+                }
+            }
+        }
+    }
+
+    private void initEventsTab1() {
+        txtSearchHD.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { filterLiveHD(); }
+            public void removeUpdate(DocumentEvent e) { filterLiveHD(); }
+            public void changedUpdate(DocumentEvent e) { filterLiveHD(); }
+
+            private void filterLiveHD() {
+                String text = txtSearchHD.getText().trim();
+                if (text.length() == 0) {
+                    sorterDSHD.setRowFilter(null);
+                } else {
+                    sorterDSHD.setRowFilter(RowFilter.regexFilter("(?i)" + text, 0));
+                }
+            }
+        });
+
+        tblDanhSachHD.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int row = tblDanhSachHD.getSelectedRow();
+                    if (row >= 0) {
+                        int modelRow = tblDanhSachHD.convertRowIndexToModel(row);
+                        String maHDStr = modelDanhSachHD.getValueAt(modelRow, 0).toString();
+                        int maHD = Integer.parseInt(maHDStr.replace("HD", ""));
+                        loadChiTietHoaDon(maHD);
+                    }
+                }
+            }
+        });
 
         tblHoaDonCu.addMouseListener(new MouseAdapter() {
             @Override
@@ -200,52 +341,46 @@ public class DoiTraGUI extends JPanel {
         btnXacNhan.addActionListener(e -> xuLyHoanTien());
     }
 
-    // --- CÁC HÀM XỬ LÝ LOGIC ---
+    // Các logic thêm sửa xóa giỏ hàng giữ nguyên...
+    private void loadChiTietHoaDon(int maHD) {
+        currentHoaDon = hoaDonBUS.getHoaDonById(maHD);
 
-    private void timKiemHoaDon() {
-        try {
-            // Lấy chuỗi người dùng gõ
-            String input = txtSearchHD.getText().trim();
+        if (currentHoaDon == null) {
+            JOptionPane.showMessageDialog(this, "Không tìm thấy dữ liệu hóa đơn!");
+            return;
+        }
 
-            // XỬ LÝ CHUỖI: Nếu có chữ "HD" hoặc "hd" ở đầu thì cắt bỏ, chỉ giữ lại số
-            if (input.toUpperCase().startsWith("HD")) {
-                input = input.substring(2); // Cắt 2 ký tự đầu
-            }
+        if (currentHoaDon.getTrangThai() == TrangThaiGiaoDich.DA_HUY) {
+            JOptionPane.showMessageDialog(this, "Hóa đơn này đã bị hủy, không thể đổi trả!");
+            return;
+        }
 
-            int maHD = Integer.parseInt(input);
-            currentHoaDon = hoaDonBUS.getHoaDonById(maHD);
+        lblThongTinHD.setText("Đang xử lý HĐ: HD" + String.format("%03d", maHD) + " - Tổng tiền gốc: " + String.format("%,.0f", currentHoaDon.getThanhTien()) + " VNĐ");
 
-            if (currentHoaDon == null) {
-                JOptionPane.showMessageDialog(this, "Không tìm thấy Hóa đơn mã: " + maHD);
-                return;
-            }
-            if (currentHoaDon.getTrangThai() == enums.TrangThaiGiaoDich.DaHuy) {
-                JOptionPane.showMessageDialog(this, "Hóa đơn này đã bị hủy toàn bộ, không thể đổi trả!");
-                return;
-            }
+        listChiTietHD = hoaDonBUS.getChiTietByMaHD(maHD);
+        modelHDCu.setRowCount(0);
 
-            lblThongTinHD.setText("Đang xử lý Hóa Đơn: HD" + String.format("%03d", maHD) + " - Tổng tiền gốc: " + String.format("%,.0f", currentHoaDon.getThanhTien()) + " VNĐ");
+        bus.SachBUS sachBUS = new bus.SachBUS();
 
-            // Lấy chi tiết hóa đơn
-            listChiTietHD = hoaDonBUS.getChiTietByMaHD(maHD);
-            modelHDCu.setRowCount(0);
-
+        if (listChiTietHD != null && !listChiTietHD.isEmpty()) {
             for (ChiTietHoaDonDTO ct : listChiTietHD) {
+                String tenSach = ct.getTenSach();
+                if (tenSach == null || tenSach.isEmpty()) {
+                    dto.SachDTO s = sachBUS.getById(ct.getMaSach());
+                    tenSach = (s != null) ? s.getTenSach() : "Sách ẩn/ID: " + ct.getMaSach();
+                    ct.setTenSach(tenSach);
+                }
+
                 modelHDCu.addRow(new Object[]{
                         "S" + String.format("%03d", ct.getMaSach()),
-                        ct.getTenSach() != null ? ct.getTenSach() : "ID: " + ct.getMaSach(),
+                        tenSach,
                         String.format("%,.0f", ct.getDonGia()),
                         ct.getSoLuong()
                 });
             }
-
-            // Reset giỏ trả hàng
-            dsTraHang.clear();
-            capNhatBangTraHang();
-
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Mã hóa đơn không hợp lệ! Vui lòng gõ số (VD: 1) hoặc mã (VD: HD001)");
         }
+        dsTraHang.clear();
+        capNhatBangTraHang();
     }
 
     private void chonSachDeTra() {
@@ -254,7 +389,6 @@ public class DoiTraGUI extends JPanel {
 
         ChiTietHoaDonDTO ctGoc = listChiTietHD.get(row);
 
-        // 1. Hỏi số lượng muốn trả
         String inputSL = JOptionPane.showInputDialog(this,
                 "Nhập số lượng muốn trả (Tối đa " + ctGoc.getSoLuong() + "):", "1");
         if (inputSL == null || inputSL.trim().isEmpty()) return;
@@ -266,7 +400,6 @@ public class DoiTraGUI extends JPanel {
                 return;
             }
 
-            // 2. Hỏi tình trạng sách
             String[] options = {"Lỗi NSX", "Nguyên vẹn (Khách đổi ý)"};
             String tinhTrang = (String) JOptionPane.showInputDialog(this,
                     "Tình trạng sách trả lại:", "Đánh giá tình trạng",
@@ -274,7 +407,6 @@ public class DoiTraGUI extends JPanel {
 
             if (tinhTrang == null) return;
 
-            // 3. Đưa vào giỏ trả hàng
             boolean daCo = false;
             for(ChiTietTraKhachHangDTO ctTra : dsTraHang) {
                 if(ctTra.getMaSach() == ctGoc.getMaSach() && ctTra.getTinhTrangSach().equals(tinhTrang)) {
@@ -313,6 +445,7 @@ public class DoiTraGUI extends JPanel {
 
         for (ChiTietTraKhachHangDTO ct : dsTraHang) {
             modelTraHang.addRow(new Object[]{
+                    "S" + String.format("%03d", ct.getMaSach()),
                     ct.getTenSach(),
                     ct.getSoLuong(),
                     ct.getTinhTrangSach(),
@@ -320,7 +453,6 @@ public class DoiTraGUI extends JPanel {
             });
             tongHoan = tongHoan.add(ct.getThanhTienHoan());
         }
-
         lblTongTienHoan.setText("CẦN HOÀN TRẢ: " + String.format("%,.0f", tongHoan) + " VNĐ");
     }
 
@@ -348,36 +480,75 @@ public class DoiTraGUI extends JPanel {
             String ketQua = phieuTraBUS.addPhieuTraKhachHang(ptk, dsTraHang);
             JOptionPane.showMessageDialog(this, ketQua);
 
-            // GỌI HÀM IN PDF Ở ĐÂY SAU KHI LƯU THÀNH CÔNG
             if (ketQua.contains("Thành công")) {
                 int inPhieu = JOptionPane.showConfirmDialog(this, "Bạn có muốn in biên lai hoàn tiền không?", "In Biên Lai", JOptionPane.YES_NO_OPTION);
                 if (inPhieu == JOptionPane.YES_OPTION) {
                     xuatPhieuTraPDF(ptk, dsTraHang);
                 }
 
-                // Reset giao diện
+                // Reset Tab 1
                 dsTraHang.clear();
                 capNhatBangTraHang();
                 modelHDCu.setRowCount(0);
                 txtSearchHD.setText("");
-                lblThongTinHD.setText("Chưa chọn hóa đơn");
+                lblThongTinHD.setText("Chưa chọn hóa đơn nào");
                 currentHoaDon = null;
+
+                // NÂNG CẤP: GỌI HÀM NÀY ĐỂ BẢNG Ở TAB 2 TỰ ĐỘNG CẬP NHẬT PHIẾU VỪA TẠO
+                loadLichSuTraHang();
             }
         }
     }
 
-    // --- HÀM TÚT GIAO DIỆN ---
-    private void styleButton(JButton btn, Color bgColor, int width) {
-        btn.setBackground(bgColor);
-        btn.setForeground(Color.WHITE);
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setOpaque(true);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.setPreferredSize(new Dimension(width, 32));
+    // =========================================================
+    // CÁC HÀM XỬ LÝ DỮ LIỆU & SỰ KIỆN TAB 2
+    // =========================================================
+    private void loadLichSuTraHang() {
+        modelLichSu.setRowCount(0);
+        // Tủn nhớ đảm bảo trong PhieuTraKhachHangBUS có hàm getAll() nhé
+        List<PhieuTraKhachHangDTO> list = phieuTraBUS.getAll();
+
+        if (list != null) {
+            for (PhieuTraKhachHangDTO pt : list) {
+                modelLichSu.addRow(new Object[]{
+                        "PT" + String.format("%03d", pt.getMaPTK()),
+                        "HD" + String.format("%03d", pt.getMaHD()),
+                        "NV" + String.format("%02d", pt.getMaNV()),
+                        pt.getLyDo(),
+                        pt.getNgayTao() != null ? pt.getNgayTao().format(dtf) : "N/A",
+                        String.format("%,.0f VNĐ", pt.getTienHoan())
+                });
+            }
+        }
     }
 
+    private void initEventsTab2() {
+        // Sự kiện Live Search cho Lịch Sử
+        txtSearchLichSu.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { filterLS(); }
+            public void removeUpdate(DocumentEvent e) { filterLS(); }
+            public void changedUpdate(DocumentEvent e) { filterLS(); }
+
+            private void filterLS() {
+                String text = txtSearchLichSu.getText().trim();
+                if (text.length() == 0) {
+                    sorterLichSu.setRowFilter(null);
+                } else {
+                    // Lọc theo PT, HD hoặc NV (Cột 0, 1, 2)
+                    sorterLichSu.setRowFilter(RowFilter.regexFilter("(?i)" + text, 0, 1, 2));
+                }
+            }
+        });
+
+        btnLamMoiLS.addActionListener(e -> {
+            txtSearchLichSu.setText("");
+            loadLichSuTraHang();
+        });
+    }
+
+    // =========================================================
+    // TIỆN ÍCH GIAO DIỆN & PDF
+    // =========================================================
     private void styleTable(JTable table) {
         table.setRowHeight(35);
         table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
@@ -393,14 +564,44 @@ public class DoiTraGUI extends JPanel {
 
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
-        for(int i=0; i<table.getColumnCount(); i++) {
-            if (i != 1 && i != 0) { // Căn giữa các cột số
+
+        DefaultTableCellRenderer statusRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object v, boolean isS, boolean hasF, int r, int c) {
+                Component comp = super.getTableCellRendererComponent(t, v, isS, hasF, r, c);
+                setHorizontalAlignment(JLabel.CENTER);
+                if (v != null) {
+                    String status = v.toString();
+                    if (status.equalsIgnoreCase("HOÀN THÀNH") || status.equalsIgnoreCase("Nguyên vẹn (Khách đổi ý)")) {
+                        comp.setForeground(new Color(46, 204, 113));
+                        setFont(getFont().deriveFont(Font.BOLD));
+                    }
+                    else if (status.equalsIgnoreCase("Lỗi NSX") || status.equalsIgnoreCase("ĐÃ HỦY")) {
+                        comp.setForeground(new Color(231, 76, 60));
+                        setFont(getFont().deriveFont(Font.BOLD));
+                    }
+                    else {
+                        comp.setForeground(Color.BLACK);
+                        setFont(getFont().deriveFont(Font.PLAIN));
+                    }
+                }
+                if (isS) comp.setForeground(t.getSelectionForeground());
+                return comp;
+            }
+        };
+
+        for(int i = 0; i < table.getColumnCount(); i++) {
+            // Cột 3 ở bảng Hóa Đơn và Bảng Trả Hàng (Tạo) là trạng thái
+            if (i == 3 && (table == tblDanhSachHD || table == tblTraHang)) {
+                table.getColumnModel().getColumn(i).setCellRenderer(statusRenderer);
+            }
+            else if (i != 1 && i != 0 && i != 3) { // Né cột Tên, Lý Do ra
                 table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
             }
         }
     }
 
-    private void xuatPhieuTraPDF(dto.PhieuTraKhachHangDTO ptk, java.util.List<dto.ChiTietTraKhachHangDTO> dsTra) {
+    private void xuatPhieuTraPDF(PhieuTraKhachHangDTO ptk, List<ChiTietTraKhachHangDTO> dsTra) {
         try {
             String path = "PhieuTraHang_HD" + ptk.getMaHD() + "_" + System.currentTimeMillis() + ".pdf";
             Document document = new Document();
@@ -409,7 +610,6 @@ public class DoiTraGUI extends JPanel {
 
             BaseFont bf = BaseFont.createFont("c:\\windows\\fonts\\arial.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
 
-            // SỬ DỤNG ĐƯỜNG DẪN TUYỆT ĐỐI CHO FONT PDF
             com.itextpdf.text.Font fontTitle = new com.itextpdf.text.Font(bf, 18, com.itextpdf.text.Font.BOLD, BaseColor.RED);
             com.itextpdf.text.Font fontHeader = new com.itextpdf.text.Font(bf, 12, com.itextpdf.text.Font.BOLD);
             com.itextpdf.text.Font fontNormal = new com.itextpdf.text.Font(bf, 12, com.itextpdf.text.Font.NORMAL);
@@ -425,11 +625,11 @@ public class DoiTraGUI extends JPanel {
             document.add(new Paragraph("---------------------------------------------------------", fontNormal));
             document.add(new Paragraph(" "));
 
-            PdfPTable pdfTable = new PdfPTable(4);
+            PdfPTable pdfTable = new PdfPTable(5);
             pdfTable.setWidthPercentage(100);
-            pdfTable.setWidths(new float[]{4f, 1.5f, 2.5f, 2f});
+            pdfTable.setWidths(new float[]{1.5f, 4f, 1.2f, 2.5f, 2.5f});
 
-            String[] headers = {"Tên Sách", "SL Trả", "Tình Trạng", "Tiền Hoàn"};
+            String[] headers = {"Mã Sách", "Tên Sách", "SL Trả", "Tình Trạng", "Tiền Hoàn"};
             for (String h : headers) {
                 PdfPCell cell = new PdfPCell(new Phrase(h, fontHeader));
                 cell.setHorizontalAlignment(Element.ALIGN_CENTER);
@@ -438,14 +638,20 @@ public class DoiTraGUI extends JPanel {
                 pdfTable.addCell(cell);
             }
 
-            for (dto.ChiTietTraKhachHangDTO ct : dsTra) {
+            for (ChiTietTraKhachHangDTO ct : dsTra) {
+                PdfPCell cellMa = new PdfPCell(new Phrase("S" + String.format("%03d", ct.getMaSach()), fontNormal));
+                cellMa.setHorizontalAlignment(Element.ALIGN_CENTER);
+                pdfTable.addCell(cellMa);
+
                 pdfTable.addCell(new PdfPCell(new Phrase(ct.getTenSach(), fontNormal)));
 
                 PdfPCell cellSL = new PdfPCell(new Phrase(String.valueOf(ct.getSoLuong()), fontNormal));
                 cellSL.setHorizontalAlignment(Element.ALIGN_CENTER);
                 pdfTable.addCell(cellSL);
 
-                pdfTable.addCell(new PdfPCell(new Phrase(ct.getTinhTrangSach(), fontNormal)));
+                PdfPCell cellTinhTrang = new PdfPCell(new Phrase(ct.getTinhTrangSach(), fontNormal));
+                cellTinhTrang.setHorizontalAlignment(Element.ALIGN_CENTER);
+                pdfTable.addCell(cellTinhTrang);
 
                 PdfPCell cellTien = new PdfPCell(new Phrase(String.format("%,.0f", ct.getThanhTienHoan()), fontNormal));
                 cellTien.setHorizontalAlignment(Element.ALIGN_RIGHT);
@@ -455,7 +661,6 @@ public class DoiTraGUI extends JPanel {
 
             document.add(new Paragraph(" "));
 
-            // Sửa luôn cả 2 cái Font nằm lồng bên trong này
             Paragraph tongTienPara = new Paragraph("TỔNG TIỀN HOÀN: " + String.format("%,.0f VNĐ", ptk.getTienHoan()), new com.itextpdf.text.Font(bf, 14, com.itextpdf.text.Font.BOLD, BaseColor.RED));
             tongTienPara.setAlignment(Element.ALIGN_RIGHT);
             document.add(tongTienPara);

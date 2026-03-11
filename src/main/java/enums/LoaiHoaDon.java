@@ -1,5 +1,5 @@
 package enums;
 
 public enum LoaiHoaDon {
-    TaiQuay, GiaoHang
+    TAI_QUAY, GIAO_HANG
 }

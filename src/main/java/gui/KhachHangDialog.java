@@ -13,7 +13,7 @@ public class KhachHangDialog extends JDialog {
     final Color COL_PRIMARY = new Color(232, 60, 145);
     final Color COL_SIDEBAR = new Color(67, 51, 76);
 
-    private JTextField txtHoTen, txtSDT, txtDiaChi, txtDiem, txtUpdatedAt;
+    private JTextField txtHoTen, txtSDT, txtDiaChi, txtDiem, txtUpdatedAt, txtMatKhau;
     private JButton btnLuu, btnHuy;
 
     private KhachHangDTO khachHang;
@@ -33,12 +33,13 @@ public class KhachHangDialog extends JDialog {
 
     private void initUI() {
 
-        setSize(400, 400);
+        setSize(420, 480); // Tăng chiều cao xíu cho vừa 6 hàng
         setLocationRelativeTo(getParent());
         setLayout(new BorderLayout());
         getContentPane().setBackground(Color.WHITE);
 
-        JPanel pnlForm = new JPanel(new GridLayout(5, 2, 10, 20));
+        // Tăng lên 6 hàng
+        JPanel pnlForm = new JPanel(new GridLayout(6, 2, 10, 20));
         pnlForm.setBackground(Color.WHITE);
         pnlForm.setBorder(new EmptyBorder(20, 20, 20, 20));
 
@@ -46,9 +47,14 @@ public class KhachHangDialog extends JDialog {
         txtHoTen = new JTextField();
         pnlForm.add(txtHoTen);
 
-        pnlForm.add(new JLabel("Số điện thoại (*):"));
+        pnlForm.add(new JLabel("Số điện thoại (User):"));
         txtSDT = new JTextField();
         pnlForm.add(txtSDT);
+
+        // Ô Mật khẩu mới thêm
+        pnlForm.add(new JLabel("Mật khẩu cấp mới:"));
+        txtMatKhau = new JTextField();
+        pnlForm.add(txtMatKhau);
 
         pnlForm.add(new JLabel("Địa chỉ:"));
         txtDiaChi = new JTextField();
@@ -80,7 +86,7 @@ public class KhachHangDialog extends JDialog {
 
         btnLuu = new JButton("Lưu Thông Tin");
         btnLuu.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btnLuu.setBackground(COL_SIDEBAR);
+        btnLuu.setBackground(COL_PRIMARY); // Nút lưu cho màu hồng nổi bật
         btnLuu.setForeground(Color.WHITE);
         btnLuu.setFocusPainted(false);
         btnLuu.setBorderPainted(false);
@@ -99,6 +105,11 @@ public class KhachHangDialog extends JDialog {
             txtDiaChi.setText(khachHang.getDiaChi() != null ? khachHang.getDiaChi() : "");
             txtDiem.setText(String.valueOf(khachHang.getDiemTichLuy()));
 
+            // Khóa ô mật khẩu nếu là Cập nhật Khách Hàng
+            txtMatKhau.setText("********");
+            txtMatKhau.setEnabled(false);
+            txtMatKhau.setToolTipText("Đổi mật khẩu trong mục Quản lý Tài Khoản");
+
             if (khachHang.getUpdatedAt() != null) {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy");
                 txtUpdatedAt.setText(khachHang.getUpdatedAt().format(formatter));
@@ -115,6 +126,7 @@ public class KhachHangDialog extends JDialog {
             String ten = txtHoTen.getText().trim();
             String sdt = txtSDT.getText().trim();
             String diaChi = txtDiaChi.getText().trim();
+            String matKhau = txtMatKhau.getText().trim();
 
             if (ten.isEmpty() || sdt.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Vui lòng nhập đủ Họ tên và Số điện thoại!", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
@@ -123,12 +135,19 @@ public class KhachHangDialog extends JDialog {
 
             String msg = "";
             if (khachHang == null) {
+                // Kiểm tra Mật khẩu khi tạo mới
+                if (matKhau.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "Vui lòng cấp mật khẩu cho tài khoản của khách hàng này!", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
                 KhachHangDTO newKh = new KhachHangDTO();
                 newKh.setHoTen(ten);
                 newKh.setSoDienThoai(sdt);
                 newKh.setDiaChi(diaChi.isEmpty() ? null : diaChi);
 
-                msg = khBUS.addKhachHang(newKh);
+                // TRUYỀN MẬT KHẨU VÀO HÀM BUS
+                msg = khBUS.addKhachHang(newKh, matKhau);
             } else {
                 khachHang.setHoTen(ten);
                 khachHang.setSoDienThoai(sdt);

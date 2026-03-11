@@ -14,7 +14,7 @@ public class TheLoaiBUS {
 
     public TheLoaiDTO getById(int id) {
         if (id <= 0) return null;
-        return theLoaiDAO.getById(id); // Sử dụng biến theLoaiDAO chung ở trên
+        return theLoaiDAO.getById(id);
     }
 
     public String addTheLoai(TheLoaiDTO theLoai) {

@@ -19,11 +19,15 @@ public class PhieuTraNhaCungCapBUS {
     private SachDAO sachDAO = new SachDAO();
     private LichSuKhoDAO lichSuKhoDAO = new LichSuKhoDAO();
 
-    public String addPhieuTraNhaCungCap(PhieuTraNhaCungCapDTO ptn, List<ChiTietTraNhaCungCapDTO> dsChiTiet) {
-        if (ptn.getMaNCC() <= 0) return "Lỗi: Không xác định được Nhà cung cấp!";
-        if (dsChiTiet == null || dsChiTiet.isEmpty()) return "Lỗi: Phải chọn sách cần trả!";
+    public List<PhieuTraNhaCungCapDTO> getAll() {
+        return ptnccDAO.getAll();
+    }
 
-        int maPhieuTra = ptnccDAO.insert(ptn);
+    public String addPhieuTraNCC(PhieuTraNhaCungCapDTO pt, List<ChiTietTraNhaCungCapDTO> dsChiTiet) {
+        if (pt.getMaNCC() <= 0) return "Lỗi: Không xác định được Nhà Cung Cấp!";
+        if (dsChiTiet == null || dsChiTiet.isEmpty()) return "Lỗi: Phải có ít nhất 1 cuốn sách được trả!";
+
+        int maPhieuTra = ptnccDAO.insert(pt);
 
         if (maPhieuTra > 0) {
             for (ChiTietTraNhaCungCapDTO ct : dsChiTiet) {
@@ -31,19 +35,20 @@ public class PhieuTraNhaCungCapBUS {
                 ctptnccDAO.insert(ct);
 
                 sachDAO.truTonKho(ct.getMaSach(), ct.getSoLuong());
-
                 LichSuKhoDTO lichSu = new LichSuKhoDTO();
                 lichSu.setMaSach(ct.getMaSach());
+
                 lichSu.setLoaiGiaoDich(LoaiGiaoDich.TRA_NCC);
-                lichSu.setLoaiChungTu(LoaiChungTu.PTNCC);
+                lichSu.setLoaiChungTu(LoaiChungTu.PHIEU_TRA_NHA_CUNG_CAP);
+
                 lichSu.setMaChungTu(maPhieuTra);
                 lichSu.setSoLuongThayDoi(-ct.getSoLuong());
-                lichSu.setGhiChu("Trả hàng cho Nhà cung cấp (Mã PTN: " + maPhieuTra + ")");
+                lichSu.setGhiChu("Trả hàng Nhà Cung Cấp (Mã PTN: " + maPhieuTra + ")");
 
                 lichSuKhoDAO.insert(lichSu);
             }
-            return "Thành công: Đã lập phiếu trả Nhà cung cấp và xuất kho sách!";
+            return "Thành công: Đã trả hàng cho Nhà Cung Cấp và tự động cập nhật kho!";
         }
-        return "Lỗi: Không thể tạo phiếu trả hàng cho Nhà cung cấp!";
+        return "Lỗi: Hệ thống không thể tạo phiếu trả hàng NCC!";
     }
 }

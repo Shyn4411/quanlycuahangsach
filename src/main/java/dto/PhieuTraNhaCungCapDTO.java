@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 
 public class PhieuTraNhaCungCapDTO {
     private int maPTN;
-    private String maPTNCode;
     private int maNV;
     private int maNCC;
     private String lyDo;
@@ -15,9 +14,8 @@ public class PhieuTraNhaCungCapDTO {
     public PhieuTraNhaCungCapDTO() {
     }
 
-    public PhieuTraNhaCungCapDTO(int maPTN, String maPTNCode, int maNV, int maNCC, BigDecimal tongTienHoan, String lyDo, LocalDateTime ngayTao) {
+    public PhieuTraNhaCungCapDTO(int maPTN, int maNV, int maNCC, BigDecimal tongTienHoan, String lyDo, LocalDateTime ngayTao) {
         this.maPTN = maPTN;
-        this.maPTNCode = maPTNCode;
         this.maNV = maNV;
         this.maNCC = maNCC;
         this.tongTienHoan = tongTienHoan;
@@ -33,13 +31,6 @@ public class PhieuTraNhaCungCapDTO {
         this.maPTN = maPTN;
     }
 
-    public String getMaPTNCode() {
-        return maPTNCode;
-    }
-
-    public void setMaPTNCode(String maPTNCode) {
-        this.maPTNCode = maPTNCode;
-    }
 
     public int getMaNV() {
         return maNV;
@@ -85,7 +76,6 @@ public class PhieuTraNhaCungCapDTO {
     public String toString() {
         return "PhieuTraNhaCungCapDTO{" +
                 "maPTN=" + maPTN +
-                ", maPTNCode='" + maPTNCode + '\'' +
                 ", maNCC=" + maNCC +
                 ", tongTienHoan=" + tongTienHoan +
                 '}';

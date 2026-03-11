@@ -1,8 +1,10 @@
 package dao;
 
 import dto.ThanhToanDTO;
+import enums.TrangThaiThanhToan;
 import utils.JDBCUtil;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -41,8 +43,7 @@ public class ThanhToanDAO {
         return list;
     }
 
-    public List<ThanhToanDTO> getByMaHD(int maHD) {
-        List<ThanhToanDTO> list = new ArrayList<>();
+    public ThanhToanDTO getByMaHD(int maHD) {
         String sql = "SELECT MaThanhToan, MaHD, PhuongThuc, SoTien, TrangThai, NgayThanhToan, GhiChuGiaoDich FROM ThanhToan WHERE MaHD = ? ORDER BY NgayThanhToan DESC";
 
         try (Connection conn = JDBCUtil.getConnection();
@@ -50,7 +51,7 @@ public class ThanhToanDAO {
 
             ps.setInt(1, maHD);
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
+                if (rs.next()) {
                     ThanhToanDTO thanhToanDTO = new ThanhToanDTO();
                     thanhToanDTO.setMaThanhToan(rs.getInt("MaThanhToan"));
                     thanhToanDTO.setMaHD(rs.getInt("MaHD"));
@@ -65,13 +66,13 @@ public class ThanhToanDAO {
                     }
                     thanhToanDTO.setGhiChuGiaoDich(rs.getString("GhiChuGiaoDich"));
 
-                    list.add(thanhToanDTO);
+                    return thanhToanDTO;
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return list;
+        return null;
     }
 
     public boolean insert(ThanhToanDTO thanhToanDTO) {
@@ -82,8 +83,13 @@ public class ThanhToanDAO {
 
             ps.setInt(1, thanhToanDTO.getMaHD());
             ps.setString(2, thanhToanDTO.getPhuongThuc().name());
-            ps.setBigDecimal(3, thanhToanDTO.getSoTien());
-            ps.setString(4, thanhToanDTO.getTrangThai().name());
+            if (thanhToanDTO.getSoTien() != null) {
+                ps.setBigDecimal(3, thanhToanDTO.getSoTien());
+            } else {
+                ps.setBigDecimal(3,  BigDecimal.ZERO);
+            }
+            String trangThai = (thanhToanDTO.getTrangThai() != null) ? thanhToanDTO.getTrangThai().name() : TrangThaiThanhToan.THANH_CONG.name();
+            ps.setString(4, trangThai);
             ps.setString(5, thanhToanDTO.getGhiChuGiaoDich());
 
             return ps.executeUpdate() > 0;

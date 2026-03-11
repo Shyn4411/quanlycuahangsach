@@ -5,60 +5,29 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ThongKeBUS {
-
     private ThongKeDAO thongKeDAO = new ThongKeDAO();
 
-    // ========================================================
-    // PHẦN 1: CÁC HÀM CHO 3 THẺ TỔNG KẾT (TỔNG VỐN, DOANH THU)
-    // ========================================================
-
-    public double getTongDoanhThu(String tuNgay, String denNgay) {
-        if (!validateDate(tuNgay, denNgay)) return 0;
-        // Gọi DAO lấy tổng tiền các HÓA ĐƠN có trạng thái HOÀN THÀNH trong khoảng thời gian
-        return thongKeDAO.getTongDoanhThu(tuNgay, denNgay);
+    public double getTongDoanhThu(String tu, String den) {
+        return validate(tu, den) ? thongKeDAO.getTongDoanhThu(tu, den) : 0;
     }
 
-    public double getTongVon(String tuNgay, String denNgay) {
-        if (!validateDate(tuNgay, denNgay)) return 0;
-        // Gọi DAO lấy tổng tiền các PHIẾU NHẬP có trạng thái HOÀN THÀNH trong khoảng thời gian
-        return thongKeDAO.getTongVon(tuNgay, denNgay);
+    public double getTongVon(String tu, String den) {
+        return validate(tu, den) ? thongKeDAO.getTongVon(tu, den) : 0;
     }
 
-    public double getLoiNhuan(String tuNgay, String denNgay) {
-        double doanhThu = getTongDoanhThu(tuNgay, denNgay);
-        double von = getTongVon(tuNgay, denNgay);
-        return doanhThu - von;
+    public double getLoiNhuan(String tu, String den) {
+        return getTongDoanhThu(tu, den) - getTongVon(tu, den);
     }
 
-    // ========================================================
-    // PHẦN 2: 3 HÀM TƯƠNG ỨNG VỚI 3 LỰA CHỌN TRONG COMBOBOX
-    // ========================================================
-
-    // 1. TOP SÁCH BÁN CHẠY (Lọc theo ngày)
-    public List<Object[]> getTopSachBanChay(String tuNgay, String denNgay) {
-        if (!validateDate(tuNgay, denNgay)) return new ArrayList<>();
-        return thongKeDAO.getTopSachBanChay(tuNgay, denNgay);
+    public List<Object[]> getDoanhThuTheoThang(String tu, String den) {
+        return validate(tu, den) ? thongKeDAO.getDoanhThuTheoThang(tu, den) : new ArrayList<>();
     }
 
-    // 2. DOANH THU THEO THÁNG (Lọc theo ngày)
-    public List<Object[]> getDoanhThuTheoThang(String tuNgay, String denNgay) {
-        if (!validateDate(tuNgay, denNgay)) return new ArrayList<>();
-        return thongKeDAO.getDoanhThuTheoThang(tuNgay, denNgay);
-    }
-
-    // 3. SÁCH SẮP HẾT HÀNG (Tồn kho < 10)
     public List<Object[]> getSachSapHet() {
-        // Hàm này KHÔNG cần lọc theo ngày vì tồn kho là con số tính đến thời điểm hiện tại
         return thongKeDAO.getSachSapHet();
     }
 
-    // ========================================================
-    // HÀM KIỂM TRA LOGIC NGÀY THÁNG
-    // ========================================================
-    private boolean validateDate(String tuNgay, String denNgay) {
-        if (tuNgay == null || denNgay == null || tuNgay.isEmpty() || denNgay.isEmpty()) {
-            return false;
-        }
-        return true;
+    private boolean validate(String t, String d) {
+        return t != null && d != null && !t.isEmpty() && !d.isEmpty();
     }
 }

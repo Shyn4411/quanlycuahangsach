@@ -1,19 +1,32 @@
 package gui;
 
 import bus.SachBUS;
-import bus.TheLoaiBUS; // IMPORT THÊM BUS NÀY NHA TỦN
+import bus.TheLoaiBUS;
 import dto.SachDTO;
 import dto.TaiKhoanDTO;
-import dto.TheLoaiDTO; // IMPORT THÊM DTO NÀY NỮA
+import dto.TheLoaiDTO;
 import enums.TrangThaiSach;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.TableRowSorter;
 import java.awt.*;
+import java.awt.Color;
+import java.awt.Font;
 import java.util.List;
+
+
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.math.BigDecimal;
 
 public class SachGUI extends JPanel {
 
@@ -21,12 +34,14 @@ public class SachGUI extends JPanel {
     final Color COL_SIDEBAR = new Color(67, 51, 76);
 
     private SachBUS sBUS = new SachBUS();
-    private TheLoaiBUS tlBUS = new TheLoaiBUS(); // KHỞI TẠO BUS THỂ LOẠI
+    private TheLoaiBUS tlBUS = new TheLoaiBUS();
 
     private DefaultTableModel modelSach;
     private JTable tblSach;
+    private TableRowSorter<DefaultTableModel> sorterSach; // NÂNG CẤP BỘ LỌC THÔNG MINH
+
     private JTextField txtTimKiem;
-    private JButton btnThem, btnXemChiTiet, btnXoa, btnLoc;
+    private JButton btnThem, btnXemChiTiet, btnXoa, btnLamMoi, btnImport; // Đổi nút Lọc thành Làm Mới
     private TaiKhoanDTO userLogin;
 
     public SachGUI(TaiKhoanDTO user) {
@@ -48,25 +63,31 @@ public class SachGUI extends JPanel {
         JPanel pnlSearch = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         pnlSearch.setBackground(Color.WHITE);
         txtTimKiem = new JTextField(20);
-        txtTimKiem.setPreferredSize(new Dimension(200, 35));
-        btnLoc = createFlatButton("Lọc", "/icons/research.png", COL_SIDEBAR);
-        pnlSearch.add(new JLabel("Tìm kiếm:"));
+        txtTimKiem.setPreferredSize(new Dimension(250, 35)); // Kéo dài ra xíu
+
+        btnLamMoi = createFlatButton("Làm mới", "/icons/research.png", Color.GRAY);
+        btnLamMoi.setPreferredSize(new Dimension(110, 35)); // Nút làm mới cho gọn lại
+
+        pnlSearch.add(new JLabel("Tìm kiếm (Mã/Tên/Tác giả/Thể loại):"));
         pnlSearch.add(txtTimKiem);
-        pnlSearch.add(btnLoc);
+        pnlSearch.add(btnLamMoi);
 
         JPanel pnlAction = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         pnlAction.setBackground(Color.WHITE);
-        btnThem = createFlatButton("Thêm Sách", "/icons/plus.png", COL_PRIMARY);
+        btnThem = createFlatButton("Thêm", "/icons/plus.png", COL_PRIMARY);
         btnXemChiTiet = createFlatButton("Xem chi tiết", "/icons/view.png", COL_SIDEBAR);
         btnXemChiTiet.setPreferredSize(new Dimension(150,35));
         btnXoa = createFlatButton("Xóa", "/icons/delete.png", COL_SIDEBAR);
+        btnImport = createFlatButton("Nhập", "/icons/pencil.png", new Color(46, 204, 113));
 
         if (userLogin.getMaQuyen() == 2) {
             btnThem.setVisible(false);
             btnXemChiTiet.setVisible(false);
             btnXoa.setVisible(false);
+            btnImport.setVisible(false);
         }
 
+        pnlAction.add(btnImport);
         pnlAction.add(btnXoa);
         pnlAction.add(btnXemChiTiet);
         pnlAction.add(btnThem);
@@ -83,12 +104,13 @@ public class SachGUI extends JPanel {
         tblSach = new JTable(modelSach);
         tblSach.setRowHeight(40);
 
+        // NÂNG CẤP: Gắn Sorter vào bảng để chuẩn bị làm Live Search
+        sorterSach = new TableRowSorter<>(modelSach);
+        tblSach.setRowSorter(sorterSach);
 
-        // Bọc JScrollPane và thêm cái viền (Border) xám bao quanh toàn bộ bảng
         JScrollPane scrollPane = new JScrollPane(tblSach);
         scrollPane.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
 
-        add(pnlToolbar, BorderLayout.NORTH);
         add(scrollPane, BorderLayout.CENTER);
 
         // ==========================================
@@ -111,12 +133,11 @@ public class SachGUI extends JPanel {
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
 
-        tblSach.getColumnModel().getColumn(0).setCellRenderer(centerRenderer); // Mã
-        tblSach.getColumnModel().getColumn(3).setCellRenderer(centerRenderer); // Thể Loại (Căn giữa cho đẹp)
-        tblSach.getColumnModel().getColumn(4).setCellRenderer(centerRenderer); // Giá
-        tblSach.getColumnModel().getColumn(5).setCellRenderer(centerRenderer); // Kho
+        tblSach.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
+        tblSach.getColumnModel().getColumn(3).setCellRenderer(centerRenderer);
+        tblSach.getColumnModel().getColumn(4).setCellRenderer(centerRenderer);
+        tblSach.getColumnModel().getColumn(5).setCellRenderer(centerRenderer);
 
-        // Tô màu Trạng Thái
         tblSach.getColumnModel().getColumn(6).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
@@ -158,28 +179,23 @@ public class SachGUI extends JPanel {
         btn.setBorderPainted(false);
         btn.setOpaque(true);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.setPreferredSize(new Dimension(130, 35));
+        btn.setPreferredSize(new Dimension(110, 35));
         return btn;
     }
 
-    // ========================================================
-    // ĐÃ FIX HÀM NÀY ĐỂ HIỂN THỊ TÊN THỂ LOẠI THAY VÌ MÃ
-    // ========================================================
     public void loadDataToTable() {
         modelSach.setRowCount(0);
         List<SachDTO> ds = sBUS.getAll();
         for (SachDTO s : ds) {
-            String ttStr = (s.getTrangThai() == TrangThaiSach.DangBan) ? "ĐANG BÁN" : "NGỪNG BÁN";
+            String ttStr = (s.getTrangThai() == TrangThaiSach.DANG_BAN) ? "ĐANG BÁN" : "NGỪNG BÁN";
 
-            // Dùng TheLoaiBUS móc tên thể loại lên
-            TheLoaiDTO tl = tlBUS.getById(s.getMaLoai());
-            String tenTheLoai = (tl != null) ? tl.getTenLoai() : "Chưa phân loại";
+            String tenTheLoai = (s.getTenLoai() != null) ? s.getTenLoai() : "Chưa phân loại";
 
             modelSach.addRow(new Object[]{
                     s.getMaSachCode(),
                     s.getTenSach(),
                     s.getDanhSachTacGia(),
-                    tenTheLoai, // <-- Gắn Tên Thể Loại vào đây
+                    tenTheLoai,
                     String.format("%,.0fđ", s.getGiaBan()),
                     s.getSoLuongTon(),
                     ttStr
@@ -187,45 +203,33 @@ public class SachGUI extends JPanel {
         }
     }
 
-    // ========================================================
-    // ĐÃ FIX HÀM NÀY ĐỂ LỌC VÀ HIỂN THỊ TÊN THỂ LOẠI LUÔN
-    // ========================================================
-    private void applyFilters() {
-        modelSach.setRowCount(0);
-        List<SachDTO> ds = sBUS.getAll();
-        String keyword = txtTimKiem.getText().trim().toLowerCase();
-
-        for (SachDTO s : ds) {
-            // Lấy tên thể loại trước để hỗ trợ tìm kiếm theo thể loại luôn
-            TheLoaiDTO tl = tlBUS.getById(s.getMaLoai());
-            String tenTheLoai = (tl != null) ? tl.getTenLoai() : "Chưa phân loại";
-
-            // Lọc theo Tên, Tác giả, Mã Sách hoặc Tên Thể Loại
-            boolean matchKey = keyword.isEmpty() ||
-                    s.getTenSach().toLowerCase().contains(keyword) ||
-                    s.getDanhSachTacGia().toLowerCase().contains(keyword) ||
-                    s.getMaSachCode().toLowerCase().contains(keyword) ||
-                    tenTheLoai.toLowerCase().contains(keyword); // Nhập "Giáo khoa" là tìm ra sách giáo khoa luôn
-
-            if (matchKey) {
-                String ttStr = (s.getTrangThai() == TrangThaiSach.DangBan) ? "ĐANG BÁN" : "NGỪNG BÁN";
-                modelSach.addRow(new Object[]{
-                        s.getMaSachCode(),
-                        s.getTenSach(),
-                        s.getDanhSachTacGia(),
-                        tenTheLoai, // <-- Gắn Tên Thể Loại vào đây
-                        String.format("%,.0fđ", s.getGiaBan()),
-                        s.getSoLuongTon(),
-                        ttStr
-                });
-            }
-        }
-    }
-
     private void initEvents() {
 
-        btnLoc.addActionListener(e -> applyFilters());
-        txtTimKiem.addActionListener(e -> applyFilters());
+        // ===============================================
+        // NÂNG CẤP: TÌM KIẾM LIVE GÕ TỚI ĐÂU LỌC TỚI ĐÓ
+        // ===============================================
+        txtTimKiem.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { filterLive(); }
+            public void removeUpdate(DocumentEvent e) { filterLive(); }
+            public void changedUpdate(DocumentEvent e) { filterLive(); }
+
+            private void filterLive() {
+                String text = txtTimKiem.getText().trim();
+                if (text.length() == 0) {
+                    sorterSach.setRowFilter(null); // Không gõ gì thì hiện toàn bộ
+                } else {
+                    // Cấu hình: Tìm kiếm không phân biệt hoa thường trên các cột: 0(Mã), 1(Tên), 2(Tác giả), 3(Thể loại)
+                    sorterSach.setRowFilter(RowFilter.regexFilter("(?i)" + text, 0, 1, 2, 3));
+                }
+            }
+        });
+
+        // Đổi nút Lọc thành Làm mới: Xóa chữ trên ô tìm kiếm và gọi loadDataToTable
+        btnLamMoi.addActionListener(e -> {
+            txtTimKiem.setText("");
+            sorterSach.setRowFilter(null);
+            loadDataToTable(); // Đề phòng DB có thay đổi từ người khác thì nhấn Làm Mới sẽ kéo Data mới nhất về
+        });
 
         btnThem.addActionListener(e -> {
             Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
@@ -242,7 +246,9 @@ public class SachGUI extends JPanel {
                 return;
             }
 
-            int id = Integer.parseInt(tblSach.getValueAt(row, 0).toString().substring(1));
+            // FIX LỖI KHI DÙNG SORTER: Phải dùng convertRowIndexToModel để lấy đúng Index dòng thực sự dưới DB
+            int modelRow = tblSach.convertRowIndexToModel(row);
+            int id = Integer.parseInt(modelSach.getValueAt(modelRow, 0).toString().substring(1));
             SachDTO s = sBUS.getById(id);
 
             if (s != null) {
@@ -262,19 +268,21 @@ public class SachGUI extends JPanel {
                 return;
             }
 
-            String trangThaiHienTai = tblSach.getValueAt(row, 6).toString();
+            int modelRow = tblSach.convertRowIndexToModel(row);
+            String trangThaiHienTai = modelSach.getValueAt(modelRow, 6).toString();
+
             if (trangThaiHienTai.equals("NGỪNG BÁN")) {
                 JOptionPane.showMessageDialog(this, "Sách này đã ngừng bán từ trước rồi!");
                 return;
             }
 
-            String tenSach = tblSach.getValueAt(row, 1).toString();
+            String tenSach = modelSach.getValueAt(modelRow, 1).toString();
             int confirm = JOptionPane.showConfirmDialog(this,
                     "Bạn có chắc chắn muốn NGỪNG BÁN sách:\n" + tenSach + " ?",
                     "Xác nhận", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
             if (confirm == JOptionPane.YES_OPTION) {
-                int id = Integer.parseInt(tblSach.getValueAt(row, 0).toString().substring(1));
+                int id = Integer.parseInt(modelSach.getValueAt(modelRow, 0).toString().substring(1));
 
                 String msg = sBUS.deleteSach(id);
                 JOptionPane.showMessageDialog(this, msg);
@@ -282,5 +290,89 @@ public class SachGUI extends JPanel {
                 loadDataToTable();
             }
         });
+        btnImport.addActionListener(e -> xuLyImportExcel());
+    }
+
+
+    private void xuLyImportExcel() {
+        // 1. Mở cửa sổ chọn file cho người dùng
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Chọn file Excel chứa danh sách Sách");
+        // Chỉ cho phép chọn file .xlsx
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("Excel Files (*.xlsx)", "xlsx");
+        fileChooser.setFileFilter(filter);
+
+        int userSelection = fileChooser.showOpenDialog(this);
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToImport = fileChooser.getSelectedFile();
+
+            try (FileInputStream fis = new FileInputStream(fileToImport);
+                 Workbook workbook = new XSSFWorkbook(fis)) {
+
+                // Lấy Sheet đầu tiên (Sheet 0)
+                Sheet sheet = workbook.getSheetAt(0);
+                int soLuongThanhCong = 0;
+
+                // Tạm gọi SachBUS để lưu vào Database
+                bus.SachBUS sachBUS = new bus.SachBUS();
+
+                // 2. Vòng lặp đọc từng dòng (Bắt đầu từ 1 để bỏ qua dòng Tiêu đề)
+                for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                    Row row = sheet.getRow(i);
+                    if (row == null) continue; // Bỏ qua dòng trống
+
+                    try {
+                        dto.SachDTO sachMoi = new dto.SachDTO();
+
+                        // Cột 0: Tên sách (String)
+                        sachMoi.setTenSach(row.getCell(0).getStringCellValue());
+
+                        // Cột 1: Mã Loại (Số)
+                        sachMoi.setMaLoai((int) row.getCell(1).getNumericCellValue());
+
+                        // Cột 2: Mã NXB (Số)
+                        sachMoi.setMaNXB((int) row.getCell(2).getNumericCellValue());
+
+                        // Cột 3: Giá Gốc (Số -> BigDecimal)
+                        double giaGoc = row.getCell(3).getNumericCellValue();
+                        sachMoi.setGiaGoc(BigDecimal.valueOf(giaGoc));
+
+                        // Cột 4: Giá Bán (Số -> BigDecimal)
+                        double giaBan = row.getCell(4).getNumericCellValue();
+                        sachMoi.setGiaBan(BigDecimal.valueOf(giaBan));
+
+                        // Cột 5: Số lượng tồn (Số)
+                        sachMoi.setSoLuongTon((int) row.getCell(5).getNumericCellValue());
+
+                        // Set các thông tin mặc định khác
+                        sachMoi.setTrangThai(enums.TrangThaiSach.DANG_BAN);
+                        sachMoi.setSoLuongLoi(0);
+                        sachMoi.setHinhAnh(""); // Tạm thời để trống ảnh
+
+                        // 3. Đẩy xuống Database (Giả sử tác giả mặc định là 1 để tránh lỗi)
+                        java.util.List<Integer> listTacGia = new java.util.ArrayList<>();
+                        listTacGia.add(1);
+
+                        String msg = sachBUS.addSach(sachMoi, listTacGia);
+                        if (msg.contains("Thành công")) {
+                            soLuongThanhCong++;
+                        }
+
+                    } catch (Exception exRow) {
+                        System.out.println("Lỗi ở dòng " + (i + 1) + ": " + exRow.getMessage());
+
+                    }
+                }
+
+                JOptionPane.showMessageDialog(this, "Import thành công " + soLuongThanhCong + " cuốn sách vào CSDL!");
+
+
+                loadDataToTable();
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Lỗi đọc file Excel: " + ex.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 }

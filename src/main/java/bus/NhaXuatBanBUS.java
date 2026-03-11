@@ -62,7 +62,6 @@ public class NhaXuatBanBUS {
     }
 
     public NhaXuatBanDTO getById(int id) {
-        // Nếu id truyền vào tào lao (<= 0) thì khỏi tìm cho mệt
         if (id <= 0) return null;
         return nxbDAO.getById(id);
     }

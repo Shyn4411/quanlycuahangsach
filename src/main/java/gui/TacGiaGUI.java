@@ -66,7 +66,7 @@ public class TacGiaGUI extends JPanel {
         pnlAction.setOpaque(false);
         btnThem = new JButton("Thêm Mới");
         styleButton(btnThem, COL_PRIMARY);
-        btnSua = new JButton("Sửa");
+        btnSua = new JButton("Chỉnh Sửa");
         styleButton(btnSua, COL_SIDEBAR);
         btnXoa = new JButton("Xóa");
         styleButton(btnXoa, new Color(231, 76, 60));
@@ -80,7 +80,6 @@ public class TacGiaGUI extends JPanel {
         pnlToolbar.add(pnlAction, BorderLayout.EAST);
         add(pnlToolbar, BorderLayout.NORTH);
 
-        // --- 2. BẢNG DỮ LIỆU ---
         String[] columns = {"Mã Tác Giả", "Tên Tác Giả", "Trạng Thái"};
         model = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -97,8 +96,8 @@ public class TacGiaGUI extends JPanel {
         tbl.setRowHeight(40);
         tbl.setSelectionBackground(new Color(232, 240, 255));
         tbl.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        tbl.setSelectionForeground(Color.BLACK);
 
-        // --- STYLE HEADER ---
         JTableHeader header = tbl.getTableHeader();
         header.setBackground(new Color(245, 245, 250));
         header.setFont(new Font("Segoe UI", Font.BOLD, 13));
@@ -107,27 +106,24 @@ public class TacGiaGUI extends JPanel {
         header.setPreferredSize(new Dimension(0, 40));
         ((DefaultTableCellRenderer) header.getDefaultRenderer()).setHorizontalAlignment(JLabel.CENTER);
 
-        // --- CĂN GIỮA CÁC CỘT ---
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
 
-        tbl.getColumnModel().getColumn(0).setCellRenderer(centerRenderer); // Mã Tác Giả
+        tbl.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
 
-        // --- TÔ MÀU TRẠNG THÁI (Cột 2) ---
         tbl.getColumnModel().getColumn(2).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 setHorizontalAlignment(JLabel.CENTER);
                 if (value != null) {
-                    // Kiểm tra theo giá trị Enum HoatDong/NgungHoatDong
-                    if (value.toString().equals("HoatDong")) {
-                        c.setForeground(new Color(46, 204, 113)); // Màu xanh
-                        setText("Hoạt Động");
+                    if (value.toString().equals("HOẠT ĐỘNG")) {
+                        c.setForeground(new Color(46, 204, 113));
+                        setText("HOẠT ĐỘNG");
                         setFont(getFont().deriveFont(Font.BOLD));
                     } else {
-                        c.setForeground(new Color(231, 76, 60)); // Màu đỏ
-                        setText("Ngừng Hoạt Động");
+                        c.setForeground(new Color(231, 76, 60));
+                        setText("NGỪNG HOẠT ĐỘNG");
                         setFont(getFont().deriveFont(Font.BOLD));
                     }
                 }
@@ -154,7 +150,6 @@ public class TacGiaGUI extends JPanel {
     }
 
     private void initEvents() {
-        // Tìm kiếm nhanh
         txtTimKiem.addKeyListener(new java.awt.event.KeyAdapter() {
             @Override
             public void keyReleased(java.awt.event.KeyEvent evt) {
@@ -171,15 +166,13 @@ public class TacGiaGUI extends JPanel {
 
         btnLamMoi.addActionListener(e -> { txtTimKiem.setText(""); loadDataToTable(); });
 
-        // 1. Nút Thêm Mới
         btnThem.addActionListener(e -> {
             Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
             TacGiaDialog dialog = new TacGiaDialog(owner, null);
             dialog.setVisible(true);
-            loadDataToTable(); // Load lại bảng ngay sau khi đóng dialog
+            loadDataToTable();
         });
 
-        // 2. Nút Chỉnh Sửa
         btnSua.addActionListener(e -> {
             int row = table.getSelectedRow();
             if (row < 0) {

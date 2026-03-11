@@ -15,7 +15,6 @@ public class PhieuTraKhachHangDAO {
 
     public List<PhieuTraKhachHangDTO> getAll() {
         List<PhieuTraKhachHangDTO> list = new ArrayList<>();
-        // Đã xóa MaPTKCode khỏi câu SELECT
         String sql = "SELECT MaPTK, MaHD, MaNV, LyDo, TienHoan, NgayTao FROM PhieuTraKhachHang ORDER BY NgayTao DESC";
 
         try (Connection conn = JDBCUtil.getConnection();
@@ -43,7 +42,6 @@ public class PhieuTraKhachHangDAO {
 
     public List<PhieuTraKhachHangDTO> getByMaHD(int maHD) {
         List<PhieuTraKhachHangDTO> list = new ArrayList<>();
-        // Đã xóa MaPTKCode khỏi câu SELECT
         String sql = "SELECT MaPTK, MaHD, MaNV, LyDo, TienHoan, NgayTao FROM PhieuTraKhachHang WHERE MaHD = ? ORDER BY NgayTao DESC";
 
         try (Connection conn = JDBCUtil.getConnection();
@@ -74,7 +72,6 @@ public class PhieuTraKhachHangDAO {
     }
 
     public int insert(PhieuTraKhachHangDTO dto) {
-        // Đã xóa MaPTKCode khỏi câu INSERT
         String sql = "INSERT INTO PhieuTraKhachHang (MaHD, MaNV, LyDo, TienHoan) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = JDBCUtil.getConnection();
@@ -89,7 +86,7 @@ public class PhieuTraKhachHangDAO {
             if (affectedRows > 0) {
                 try (ResultSet rs = ps.getGeneratedKeys()) {
                     if (rs.next()) {
-                        return rs.getInt(1); // Trả về mã phiếu trả vừa tạo
+                        return rs.getInt(1);
                     }
                 }
             }

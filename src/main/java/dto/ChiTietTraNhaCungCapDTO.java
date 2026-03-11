@@ -1,10 +1,16 @@
 package dto;
 
+import java.math.BigDecimal;
+
 public class ChiTietTraNhaCungCapDTO {
     private int maCTPTN;
     private int maPTN;
     private int maSach;
     private int soLuong;
+
+    private String tenSach;
+    private BigDecimal giaNhap;
+    private BigDecimal thanhTienHoan;
 
     public ChiTietTraNhaCungCapDTO() {
     }
@@ -16,37 +22,27 @@ public class ChiTietTraNhaCungCapDTO {
         this.soLuong = soLuong;
     }
 
-    public int getMaCTPTN() {
-        return maCTPTN;
-    }
+    public int getMaCTPTN() { return maCTPTN; }
+    public void setMaCTPTN(int maCTPTN) { this.maCTPTN = maCTPTN; }
 
-    public void setMaCTPTN(int maCTPTN) {
-        this.maCTPTN = maCTPTN;
-    }
+    public int getMaPTN() { return maPTN; }
+    public void setMaPTN(int maPTN) { this.maPTN = maPTN; }
 
-    public int getMaPTN() {
-        return maPTN;
-    }
+    public int getMaSach() { return maSach; }
+    public void setMaSach(int maSach) { this.maSach = maSach; }
 
-    public void setMaPTN(int maPTN) {
-        this.maPTN = maPTN;
-    }
+    public int getSoLuong() { return soLuong; }
+    public void setSoLuong(int soLuong) { this.soLuong = soLuong; }
 
-    public int getMaSach() {
-        return maSach;
-    }
 
-    public void setMaSach(int maSach) {
-        this.maSach = maSach;
-    }
+    public String getTenSach() { return tenSach; }
+    public void setTenSach(String tenSach) { this.tenSach = tenSach; }
 
-    public int getSoLuong() {
-        return soLuong;
-    }
+    public BigDecimal getGiaNhap() { return giaNhap; }
+    public void setGiaNhap(BigDecimal giaNhap) { this.giaNhap = giaNhap; }
 
-    public void setSoLuong(int soLuong) {
-        this.soLuong = soLuong;
-    }
+    public BigDecimal getThanhTienHoan() { return thanhTienHoan; }
+    public void setThanhTienHoan(BigDecimal thanhTienHoan) { this.thanhTienHoan = thanhTienHoan; }
 
     @Override
     public String toString() {

@@ -54,7 +54,7 @@ public class KhachHangDAO {
             ps.setString(1, khachHangDTO.getHoTen());
             ps.setString(2, khachHangDTO.getSoDienThoai());
             ps.setString(3, khachHangDTO.getDiaChi());
-            ps.setString(4, TrangThaiCoBan.HoatDong.name());
+            ps.setString(4, TrangThaiCoBan.HOAT_DONG.name());
 
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -89,7 +89,7 @@ public class KhachHangDAO {
         try (Connection conn = JDBCUtil.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setString(1, TrangThaiCoBan.NgungHoatDong.name());
+            ps.setString(1, TrangThaiCoBan.NGUNG_HOAT_DONG.name());
             ps.setInt(2, maKH);
 
             return ps.executeUpdate() > 0;
@@ -132,15 +132,13 @@ public class KhachHangDAO {
 
     public KhachHangDTO getKhachHangByPhone(String phone) {
         KhachHangDTO kh = null;
-        // Chỉ tìm những khách hàng chưa bị "Xóa mềm" (Trạng thái HoatDong)
         String sql = "SELECT * FROM KhachHang WHERE SoDienThoai = ? AND TrangThai = ?";
 
         try (Connection conn = utils.JDBCUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, phone);
-            // Dùng Enum TrangThaiCoBan y hệt như lúc Tủn làm KhachHangGUI
-            ps.setString(2, enums.TrangThaiCoBan.HoatDong.name());
+            ps.setString(2, TrangThaiCoBan.HOAT_DONG.name());
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -150,17 +148,12 @@ public class KhachHangDAO {
                     kh.setSoDienThoai(rs.getString("SoDienThoai"));
                     kh.setDiemTichLuy(rs.getInt("DiemTichLuy"));
                     kh.setTrangThai(enums.TrangThaiCoBan.valueOf(rs.getString("TrangThai")));
-
-                    // Tủn có set ngày tạo thì thêm vào đây, không thì bỏ qua cũng được vì mình chỉ cần lấy Tên và ID để bán hàng
-                    if (rs.getTimestamp("NgayTao") != null) {
-                        kh.setNgayTao(rs.getTimestamp("NgayTao").toLocalDateTime());
-                    }
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return kh; // Trả về null nếu không tìm thấy ai
+        return kh;
     }
 
     public KhachHangDTO getKhachHangById(int maKH) {
@@ -185,4 +178,19 @@ public class KhachHangDAO {
         }
         return null;
     }
+
+    public boolean updateTrangThai(int maKH, String trangThai) {
+        String sql = "UPDATE KhachHang SET TrangThai = ?, UpdatedAt = CURRENT_TIMESTAMP WHERE MaKH = ?";
+        try (java.sql.Connection conn = utils.JDBCUtil.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, trangThai);
+            ps.setInt(2, maKH);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
 }
+

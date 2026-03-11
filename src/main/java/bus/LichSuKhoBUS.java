@@ -31,7 +31,7 @@ public class LichSuKhoBUS {
     public boolean ghiLogKho(int maSach, int soLuong, enums.LoaiGiaoDich giaoDich, enums.LoaiChungTu chungTu, int maCT, String ghiChu) {
         LichSuKhoDTO ls = new LichSuKhoDTO();
         ls.setMaSach(maSach);
-        ls.setSoLuongThayDoi(soLuong); // Ghi số âm nếu bán, số dương nếu nhập
+        ls.setSoLuongThayDoi(soLuong);
         ls.setLoaiGiaoDich(giaoDich);
         ls.setLoaiChungTu(chungTu);
         ls.setMaChungTu(maCT);

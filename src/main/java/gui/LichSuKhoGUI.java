@@ -65,10 +65,10 @@ public class LichSuKhoGUI extends JPanel {
     private String parseLoaiChungTu(LoaiChungTu lct) {
         if (lct == null) return "";
         switch (lct) {
-            case HOADON: return "Hóa Đơn";
-            case PHIEUNHAP: return "Phiếu Nhập";
-            case PTKH: return "Phiếu Trả KH";
-            case PTNCC: return "Phiếu Trả NCC";
+            case HOA_DON: return "Hóa Đơn";
+            case PHIEU_NHAP: return "Phiếu Nhập";
+            case PHIEU_TRA_KHACH_HANG: return "Phiếu Trả KH";
+            case PHIEU_TRA_NHA_CUNG_CAP: return "Phiếu Trả NCC";
             default: return lct.name();
         }
     }
@@ -331,10 +331,10 @@ public class LichSuKhoGUI extends JPanel {
                 if (!searchMaCT.isEmpty()) {
                     String formattedMaCT = "";
                     switch (ls.getLoaiChungTu()) {
-                        case HOADON: formattedMaCT = "hd" + String.format("%03d", ls.getMaChungTu()); break;
-                        case PHIEUNHAP: formattedMaCT = "pn" + String.format("%03d", ls.getMaChungTu()); break;
-                        case PTKH: formattedMaCT = "ptkh" + String.format("%03d", ls.getMaChungTu()); break;
-                        case PTNCC: formattedMaCT = "ptncc" + String.format("%03d", ls.getMaChungTu()); break;
+                        case HOA_DON: formattedMaCT = "hd" + String.format("%03d", ls.getMaChungTu()); break;
+                        case PHIEU_NHAP: formattedMaCT = "pn" + String.format("%03d", ls.getMaChungTu()); break;
+                        case PHIEU_TRA_KHACH_HANG: formattedMaCT = "ptkh" + String.format("%03d", ls.getMaChungTu()); break;
+                        case PHIEU_TRA_NHA_CUNG_CAP: formattedMaCT = "ptncc" + String.format("%03d", ls.getMaChungTu()); break;
                         default: formattedMaCT = String.valueOf(ls.getMaChungTu());
                     }
                     if (!formattedMaCT.contains(searchMaCT)) continue;
@@ -358,13 +358,13 @@ public class LichSuKhoGUI extends JPanel {
 
         String formattedMaCT = "";
         switch (ls.getLoaiChungTu()) {
-            case HOADON:
+            case HOA_DON:
                 formattedMaCT = "HD" + String.format("%03d", ls.getMaChungTu()); break;
-            case PHIEUNHAP:
+            case PHIEU_NHAP:
                 formattedMaCT = "PN" + String.format("%03d", ls.getMaChungTu()); break;
-            case PTKH:
+            case PHIEU_TRA_KHACH_HANG:
                 formattedMaCT = "PTKH" + String.format("%03d", ls.getMaChungTu()); break;
-            case PTNCC:
+            case PHIEU_TRA_NHA_CUNG_CAP:
                 formattedMaCT = "PTNCC" + String.format("%03d", ls.getMaChungTu()); break;
             default:
                 formattedMaCT = String.valueOf(ls.getMaChungTu());

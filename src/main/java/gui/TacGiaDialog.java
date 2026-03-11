@@ -10,7 +10,6 @@ import java.awt.*;
 public class TacGiaDialog extends JDialog {
 
     private JTextField txtTenTacGia;
-    // FIX 1: Khai báo JComboBox dùng trực tiếp kiểu Enum TrangThaiCoBan
     private JComboBox<TrangThaiCoBan> cbxTrangThai;
     private JButton btnLuu, btnHuy;
 
@@ -38,7 +37,6 @@ public class TacGiaDialog extends JDialog {
         pnlMain.setBorder(new EmptyBorder(30, 40, 30, 40));
         pnlMain.setBackground(Color.WHITE);
 
-        // --- Dòng 1: Tên Tác Giả ---
         JPanel pnlTen = new JPanel(new BorderLayout(0, 5));
         pnlTen.setOpaque(false);
         pnlTen.add(new JLabel("Tên Tác Giả:"), BorderLayout.NORTH);
@@ -47,12 +45,10 @@ public class TacGiaDialog extends JDialog {
         txtTenTacGia.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         pnlTen.add(txtTenTacGia, BorderLayout.CENTER);
 
-        // --- Dòng 2: Trạng Thái ---
         JPanel pnlStatus = new JPanel(new BorderLayout(0, 5));
         pnlStatus.setOpaque(false);
         pnlStatus.add(new JLabel("Trạng Thái:"), BorderLayout.NORTH);
 
-        // FIX 2: Khởi tạo ComboBox bằng cách gọi values() của Enum
         cbxTrangThai = new JComboBox<>(TrangThaiCoBan.values());
         cbxTrangThai.setPreferredSize(new Dimension(0, 35));
         pnlStatus.add(cbxTrangThai, BorderLayout.CENTER);
@@ -100,11 +96,9 @@ public class TacGiaDialog extends JDialog {
 
         String message = "";
         if (!isEditMode) {
-            // --- LOGIC THÊM MỚI ---
             TacGiaDTO newTG = new TacGiaDTO();
             newTG.setTenTacGia(ten);
-            // FIX 4: Dùng trực tiếp giá trị Enum HoatDong
-            newTG.setTrangThai(TrangThaiCoBan.HoatDong);
+            newTG.setTrangThai(TrangThaiCoBan.HOAT_DONG);
 
             message = tgBUS.addTacGia(newTG);
         } else {

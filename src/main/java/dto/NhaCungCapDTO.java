@@ -61,11 +61,8 @@ public class NhaCungCapDTO {
 
     @Override
     public String toString() {
-        return "NhaCungCapDTO{" +
-                "maNCC=" + maNCC +
-                ", tenNCC='" + tenNCC + '\'' +
-                ", soDienThoai='" + soDienThoai + '\'' +
-                '}';
+        if (this.maNCC == -1) return this.tenNCC; // Dòng mặc định
+        return this.maNCC + " - " + this.tenNCC;
     }
 }
 
